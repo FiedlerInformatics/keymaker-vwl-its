@@ -1,5 +1,7 @@
 from keepassObject import Key
 import tkinter as tk
+from tkinter import ttk
+import sv_ttk
 import pykeepass as pykp
 from pathlib import Path
 from PIL import ImageTk, Image
@@ -12,6 +14,9 @@ im = Image.open("loginImage.jpg")
 image = ImageTk.PhotoImage(im)
 image_label = tk.Label(login_window, image=image)
 
+sv_ttk.use_light_theme
+
+keymakerHeader = tk.Label(login_window,text="Keymaker",font="Helvetica 40 bold")
 datenbankAuswahlMeldung = tk.Label(login_window, text="Wählen Sie eine .kdbx-Datei")
 error_message = tk.Label(login_window, text="")
 
@@ -26,8 +31,8 @@ login_button = tk.Button(text="Anmelden", width=20, height=2)
 # Layout login_window
 
 
-
 image_label.place(x=0,y=0)
+keymakerHeader.place(x=355,y=40)
 datenbankAuswahlMeldung.place(x=400,y=144)
 error_message.place(x=400,y=180)
 
