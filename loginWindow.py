@@ -34,8 +34,8 @@ login_button = ttk.Button(text="Anmelden", width=20)
 # Layout login_window
 
 image_label.place(x=0,y=0)
-keymakerHeader.place(x=355,y=40)
-datenbankAuswahlMeldung.place(x=380,y=144)
+keymakerHeader.place(x=365,y=40)
+datenbankAuswahlMeldung.place(x=365,y=144)
 error_message.place(x=400,y=180)
 
 browse_database.place(x=340,y=215)
