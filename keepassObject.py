@@ -1,13 +1,19 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Optional
+import pykeepass
 
 @dataclass
 class Key:
-    password: str
-    id: str
-    key: str
-    user: str
-    geraet: str
-    date: datetime
-    lehrstuhl: str
-    hiwi: str
+    password: Optional[str] = None
+    database_path: Optional[str] = None
+    database = None
+    id: Optional[str] = None
+    key: Optional[str] = None
+    user: Optional[str] = None
+    geraet: Optional[str] = None
+    serienNummer: Optional[str] = None
+    ivs: Optional[str] = None
+    date: Optional[datetime] = None
+    lehrstuhl: Optional[str] = None
+    hiwi: Optional[str] = None

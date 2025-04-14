@@ -1,11 +1,19 @@
+import pykeepass.exceptions
 from keepassObject import Key
 from tkinter import *
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog
 import sv_ttk
-import pykeepass as pykp
+import pykeepass
+from pykeepass import PyKeePass
 from pathlib import Path
 from PIL import ImageTk, Image
+import os
+
+# Erstellung des Key-Obj
+keyObject = Key()
+for attr in keyObject.__dict__:
+    setattr(keyObject, attr, None)
 
 login_window = tk.Tk()
 login_window.geometry("700x433")
@@ -16,11 +24,13 @@ style = ttk.Style()
 style.theme_use("vista")
 login_window.iconbitmap(default="keymaker_images/lockSymbol.ico")
 
+# Bild am Linken Rand
 image = ImageTk.PhotoImage(Image.open("keymaker_images/loginImage2.jpg"))
 image_label = ttk.Label(login_window, image=image)
 
 keymakerHeader = ttk.Label(login_window,text="Keymaker",font="Helvetica 40 bold")
 datenbankAuswahlMeldung = ttk.Label(login_window, text="Wählen Sie eine .kdbx-Datei", font="Helvetica")
+
 error_message = ttk.Label(login_window, text="")
 
 browse_database = ttk.Button(text=".kdbx-Datei")
@@ -45,6 +55,35 @@ password_label.place(x=340,y=280)
 password_entry.place(x=340, y=302)
 
 login_button.place(x=430,y=357)
+
+def getDataBase() -> None:
+    keyObject.database_path = filedialog.askopenfilename(initialdir="/",title="Öffne die KeePass Datenbank", filetypes=[("KeePass Database Files","*kdbx")])
+    if keyObject.database_path:
+        database_entry.delete(0,tk.END)
+        database_entry.insert(0,keyObject.database_path)
+
+def check_file_type(filepath, extension) -> bool:
+    return Path(filepath).suffix.lower() == extension.lower()
+
+def login() -> None:
+    if len(keyObject.database_path) == 0:
+        error_message.config(text="Es wurde keine Datei ausgewählt", fg="red")
+        print(keyObject.database_path)
+    elif check_file_type(keyObject.database_path, "kdbx"):
+        error_message.config(text="Die ausgewählte Datei ist keine .kdbx Datenbank", fg="red")
+        print(database_entry.get())
+    else:
+        try:
+            keyObject.database = PyKeePass(database_entry.get(), password=password_entry.get())
+        except pykeepass.exceptions.CredentialsError as credentialerror:
+            print(credentialerror)
+            error_message.config(text="Falsches Passwort", fg="red")
+        except FileNotFoundError as filenotfounderror:
+            print(filenotfounderror)
+            error_message.configure(text="Diese Datei existiert nicht", fg="red")
+        
+browse_database.configure(command=getDataBase)
+login_button.configure(command=login)
 
 # Aktualisierung der Eingabe
 login_window.mainloop()
