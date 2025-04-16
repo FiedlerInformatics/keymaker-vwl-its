@@ -10,12 +10,14 @@ from pathlib import Path
 from PIL import ImageTk, Image
 import subprocess
 import sys
-
-# Erstellung des Key-Obj
+import pickle
+#############################
+# ERSTELLEN DES KEY OBJECTS #
+#############################
 keyObject = Key()
 for attr in keyObject.__dict__:
     setattr(keyObject, attr, None)
-
+##############################
 login_window = tk.Tk()
 login_window.geometry("700x433")
 login_window.resizable(False,False)
@@ -25,8 +27,7 @@ style = ttk.Style()
 style.theme_use("vista")
 login_window.iconbitmap(default="keymaker_images/lockSymbol.ico")
 
-# Bild am Linken Rand
-image = ImageTk.PhotoImage(Image.open("keymaker_images/loginImage2.jpg"))
+image = ImageTk.PhotoImage(Image.open("keymaker_images/loginImage2.jpg")) # Bild am Rand 
 image_label = ttk.Label(login_window, image=image)
 
 keymakerHeader = ttk.Label(login_window,text="Keymaker",font="Helvetica 40 bold")
@@ -41,9 +42,9 @@ password_label = ttk.Label(login_window, text="Password", font="Helvetica 10")
 password_entry = ttk.Entry(login_window, show="●", width=50)
 
 login_button = ttk.Button(text="Anmelden", width=20)
-
-# Layout login_window
-
+#######################
+# LAYOUT LOGIN WINDOW #
+#######################
 image_label.place(x=0,y=0)
 keymakerHeader.place(x=365,y=40)
 datenbankAuswahlMeldung.place(x=365,y=144)
@@ -56,7 +57,9 @@ password_label.place(x=340,y=280)
 password_entry.place(x=340, y=302)
 
 login_button.place(x=430,y=357)
-
+##############
+# FUNKTIONEN #
+##############
 def getDataBase() -> None:
     keyObject.database_path = filedialog.askopenfilename(initialdir="/",title="Öffne die KeePass Datenbank", filetypes=[("KeePass Database Files","*kdbx")])
     if keyObject.database_path:
@@ -68,7 +71,7 @@ def check_file_type(filepath, extension) -> bool:
     return Path(filepath).suffix.lower() == extension.lower()
 
 def check_password() -> bool:
-    try: keyObject.database = PyKeePass(database_entry.get(), password=password_entry.get())
+    try: pk= PyKeePass(database_entry.get(), password=password_entry.get())
     except pykeepass.exceptions.CredentialsError:
         return False
     return True
@@ -84,18 +87,19 @@ def login() -> None:
         else:       
             keyObject.password = password_entry.get()
             keyObject.database_path = database_entry.get()
-            keyObject.database = PyKeePass(database_entry.get(), password=password_entry.get())
             open_mainWindow()
 
 def open_mainWindow() -> None:
-    subprocess.Popen(
+   with open("keyObj.pickle", "wb") as f:
+    pickle.dump(keyObject, f)
+    f.close()
+    subprocess.Popen(                             # Starten des Hauptfensters
         [sys.executable, "mainWindow.py"] ,
-        creationflags=subprocess.CREATE_NO_WINDOW
+        creationflags=subprocess.CREATE_NO_WINDOW # Verhinderd das Öffnen eines Konsolenfensters
     )
     login_window.destroy()
 
-browse_database.configure(command=getDataBase)
+browse_database.configure(command=getDataBase)    # Konfiguration der Buttons
 login_button.configure(command=login)
 
-# Aktualisierung der Eingabe
-login_window.mainloop()
+login_window.mainloop()                           # Aktualisierung der Eingabe
