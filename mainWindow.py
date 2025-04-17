@@ -34,6 +34,8 @@ main_window.minsize(900,700)
 main_window.title("Keymaker")
 
 create_pdf = tk.BooleanVar(master=main_window,value=True)
+database = PyKeePass(keyObject.database_path, keyObject.password)
+
 ####################
 ###  FUNKTIONEN  ###
 ####################
@@ -78,13 +80,20 @@ def remove_CRLF(file_path):
             file_curr = StringIO()
             file_curr.write(clean_content)
             file_curr.seek(0)
-            
         return file_curr
 
+def create_lehrstuhlLst(PyKeePass) -> list[str]:
+     regex = r'General/Bitlocker/.*'
+     strLst = []
+     for i in range(len(PyKeePass.groups)): 
+         strVar = str(PyKeePass.groups[i]).replace('Group: ', '').replace('"','')
+         if re.match(regex, strVar): 
+             strLst.append(strVar.replace('General/Bitlocker/', ''))
+     return strLst
+######################################################################################
 style = ttk.Style(main_window)
 style.theme_use("vista")
 main_window.iconbitmap(default="keymaker_images/lockSymbol.ico")
-
 
 create_key_windowButton = ttk.Label(main_window,text="Key erstellen",font="Helvetica 12 bold")
 print_key_windowButton = ttk.Label(main_window,text="Key drucken", font="Helvetica 12 bold")
@@ -101,7 +110,9 @@ geraet_label = ttk.Label(main_window,text="Gerät", font="Helvetica 12")
 geraet_input = ttk.Entry(main_window,font=("Helvetica 12"))
 
 lehrstuhl_label = ttk.Label(main_window, text="Lehrstuhl", font="Helvetica 12")
-lehrstuhl_input = ttk.Entry(main_window, font=("Helvetica 12"))
+lehrstuhl_var = tk.StringVar()
+lehrstuhl_input = ttk.Combobox(main_window, textvariable=lehrstuhl_var, values=create_lehrstuhlLst(database), font=("Helvetica", 12))
+lehrstuhl_input.set("Lehrstuhl auswählen")
 
 seriennummer_label = ttk.Label(main_window, text="Seriennummer", font="Helvetica 12")
 seriennummer_input = ttk.Entry(main_window, font=("Helvetica 12"))
