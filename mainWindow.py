@@ -26,7 +26,7 @@ print_key = False
 ############################################
 with open("keyObj.pickle", "rb") as f:
     keyObject = pickle.load(f)
-os.remove("keyObj.pickle") # Löschen der Binärdatei
+#os.remove("keyObj.pickle") # Löschen der Binärdatei
 ############################################
 main_window = tk.Tk()
 main_window.geometry("900x700")
@@ -40,13 +40,22 @@ database = PyKeePass(keyObject.database_path, keyObject.password)
 ###  FUNKTIONEN  ###
 ####################
 def printKey_window() -> None:
-    create_key_windowButton.config(font="Helvetica 12")
-    print_key_windowButton.config(font="Helvetica 12 bold")
-    widgets_to_hide = [browse_txt, txt_entry, person_label, person_input, geraet_label, geraet_input, lehrstuhl_label, lehrstuhl_input, seriennummer_label, seriennummer_input,
-                       datum_label, datum_input, inventarnummer_label, inventarnummer_input,hilfskraft_label, hilfskraft_input, bitlocker_key_label, bitlocker_key_input, bitlocker_bezeichner_label, bitlocker_bezeichner_input, create_pdf_checkButton,create_key_button
-                      ]
-    for widget in widgets_to_hide:
-        widget.grid_forget()
+    database_entries_dropdown.grid(row=1, column=1, sticky='wn', padx=(20,0))
+    #create_key_windowButton.config(font="Helvetica 12")
+    #print_key_windowButton.config(font="Helvetica 12 bold")
+    lehrstuhl_input.set("Lehrstuhl auswählen")
+    # Verstecken der Widgets basierend auf dem Layout-Dict
+    for widget in createKey_windowsLayout.keys():
+        widget.grid_remove()
+
+def createKey_window() -> None:
+    database_entries_dropdown.grid_remove()
+    #create_key_windowButton.config(font="Helvetica 12 bold")
+    #print_key_windowButton.config(font="Helvetica 12")
+    database_entries_dropdown.set("Bitlocker auswählen")
+    # Die Widgets basierend auf dem Layout-Dict platzieren:
+    for widget, layout in createKey_windowsLayout.items():
+        widget.grid(**layout)
 
 def getKeyTxtFile() -> None:
     keyObject.txt_path = filedialog.askopenfilename(initialdir="/",title="Öffne die .txt-Datei", filetypes=[("Text Files","*txt")])
@@ -99,10 +108,23 @@ def create_lehrstuhlLst(PyKeePass) -> list[str]:
          if re.match(regex, strVar): 
              strLst.append(strVar.replace('General/Bitlocker/', ''))
      return strLst
+
+def create_entriesLst(PyKeePass) -> list[str]:
+    regex = r'General/Bitlocker/.*'
+    strLst = []
+    for i in range(len(PyKeePass.entries)): 
+        strVar = str(PyKeePass.entries[i]).replace('Entry: ', '').replace('"','')
+        if re.match(regex, strVar): 
+            strLst.append(strVar.replace('(None)', ''))
+    return strLst
+ 
 ######################################################################################
 style = ttk.Style(main_window)
 style.theme_use("vista")
 main_window.iconbitmap(default="keymaker_images/lockSymbol.ico")
+
+debugstyle = ttk.Style()
+debugstyle.configure("debugStyle",background="red")
 
 create_key_windowButton = ttk.Label(main_window,text="Key erstellen",font="Helvetica 12 bold")
 print_key_windowButton = ttk.Label(main_window,text="Key drucken", font="Helvetica 12 bold")
@@ -144,6 +166,9 @@ bitlocker_bezeichner_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
 create_pdf_checkButton = tk.Checkbutton(main_window, text="PDF erstellen",variable=create_pdf, font="Helvetica 12")
 create_key_button = ttk.Button(main_window, text="Key erstellen")
+###########################################################################
+database_entries_dropdown = ttk.Combobox(main_window, textvariable=lehrstuhl_var, values=create_entriesLst(database), font=("Helvetica", 12),width=50)
+database_entries_dropdown.set("Bitlocker auswählen")
 
 main_window.columnconfigure(0,weight=1)
 main_window.columnconfigure(1,weight=1)
@@ -155,49 +180,46 @@ for row in range(16):
     main_window.rowconfigure(row, weight=1)
 
 
+main_window.columnconfigure(0, minsize=150)
+
 create_key_windowButton.grid(column=0,row=1,sticky='w',padx=(10,5))
 print_key_windowButton.grid(column=0,row=2,sticky='w',padx=(10,5))
 
 trennlinie.grid(row=0,column=0,sticky="nes",rowspan=20,padx=10)
 
-browse_txt.grid(row=1,column=1,sticky='wn',padx=(20,0))
-txt_entry.grid(row=1,column=1, sticky='wes', columnspan=3, padx=(20,20))
+createKey_windowsLayout = {
+    browse_txt: {"row": 1, "column": 1, "sticky": 'wn', "padx": (20, 0)},
+    txt_entry: {"row": 1, "column": 1, "sticky": 'wes', "columnspan": 3, "padx": (20, 20)},
+    person_label: {"row": 3, "column": 1, "sticky": 'wn', "padx": (20, 0)},
+    person_input: {"row": 3, "column": 1, "sticky": 'wes', "padx": (20, 0)},
+    geraet_label: {"row": 3, "column": 3, "sticky": 'wn', "padx": (0, 20)},
+    geraet_input: {"row": 3, "column": 3, "sticky": 'wes', "padx": (0, 20)},
+    lehrstuhl_label: {"row": 5, "column": 1, "sticky": 'wn', "padx": (20, 0)},
+    lehrstuhl_input: {"row": 5, "column": 1, "sticky": 'wes', "padx": (20, 0)},
+    seriennummer_label: {"row": 5, "column": 3, "sticky": 'wn', "padx": (0, 20)},
+    seriennummer_input: {"row": 5, "column": 3, "sticky": 'wes', "padx": (0, 20)},
+    datum_label: {"row": 7, "column": 1, "sticky": 'wn', "padx": (20, 0)},
+    datum_input: {"row": 7, "column": 1, "sticky": 'wes', "padx": (20, 0)},
+    inventarnummer_label: {"row": 7, "column": 3, "sticky": 'wn', "padx": (0, 20)},
+    inventarnummer_input: {"row": 7, "column": 3, "sticky": 'wes', "padx": (0, 20)},
+    hilfskraft_label: {"row": 9, "column": 1, "sticky": 'wn', "padx": (20, 0)},
+    hilfskraft_input: {"row": 9, "column": 1, "sticky": 'wes', "padx": (20, 0)},
+    bitlocker_bezeichner_label: {"row": 11, "column": 1, "sticky": 'wn', "padx": (20, 20)},
+    bitlocker_bezeichner_input: {"row": 11, "column": 1, "sticky": 'wes', "columnspan": 3, "padx": (20, 20)},
+    bitlocker_key_label: {"row": 13, "column": 1, "sticky": 'wn', "padx": (20, 20)},
+    bitlocker_key_input: {"row": 13, "column": 1, "sticky": 'wes', "columnspan": 3, "padx": (20, 20)},
+    create_pdf_checkButton: {"row": 15, "column": 1, "sticky": 'wn', "padx": (20, 0)},
+    create_key_button: {"row": 15, "column": 3, "sticky": 'en', "padx": (0, 20)},
+}
 
-person_label.grid(row=3,column=1,sticky='wn',padx=(20,0))
-person_input.grid(row=3,column=1,sticky='wes',padx=(20,0))
-
-geraet_label.grid(row=3,column=3,sticky='wn',padx=(0,20))
-geraet_input.grid(row=3,column=3,sticky='wes',padx=(0,20))  
-
-lehrstuhl_label.grid(row=5, column=1, sticky='wn',padx=(20,0))
-lehrstuhl_input.grid(row=5, column=1, sticky='wes',padx=(20,0))
-
-seriennummer_label.grid(row=5, column=3, sticky='wn',padx=(0,20))
-seriennummer_input.grid(row=5, column=3, sticky='wes',padx=(0,20))
-
-datum_label.grid(row=7, column=1, sticky='wn',padx=(20,0))
-datum_input.grid(row=7, column=1, sticky='wes', padx=(20,0))
-
-inventarnummer_label.grid(row=7, column=3, sticky='wn',padx=(0,20))
-inventarnummer_input.grid(row=7, column=3, sticky='wes', padx=(0,20))
-
-hilfskraft_label.grid(row=9, column=1, sticky='wn',padx=(20,0))
-hilfskraft_input.grid(row=9, column=1, sticky='wes', padx=(20,0))
-
-bitlocker_bezeichner_label.grid(row=11, column=1, sticky='wn', padx=(20,20))
-bitlocker_bezeichner_input.grid(row=11, column=1, sticky='wes', columnspan=3, padx=(20,20))
-
-bitlocker_key_label.grid(row=13, column=1, sticky='wn',padx=(20,20 ))
-bitlocker_key_input.grid(row=13, column=1, sticky='wes', columnspan=3, padx=(20,20))
-
-create_pdf_checkButton.grid(row=15,column=1,sticky='wn',padx=(20,0))
-create_key_button.grid(row=15,column=3,sticky='en',padx=(0,20))
+for widget, layout in createKey_windowsLayout.items():
+    widget.grid(**layout)
 #############################
 # Konfiguration der Buttons #    
 #############################
 browse_txt.configure(command=getKeyTxtFile)
 print_key_windowButton.bind("<Button-1>", lambda event: printKey_window())
-
+create_key_windowButton.bind("<Button-1>", lambda event: createKey_window())
 main_window.mainloop()
 
     
