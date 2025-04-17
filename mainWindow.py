@@ -16,6 +16,7 @@ import os
 import re
 from io import StringIO
 from datetime import date
+from ctypes import windll
 
 keyObject = None
 
@@ -26,6 +27,15 @@ with open("keyObj.pickle", "rb") as f:
     keyObject = pickle.load(f)
 #os.remove("keyObj.pickle") # Löschen der Binärdatei
 ############################################
+
+def set_opacity(widget, value: float):
+    widget = widget.winfo_id()
+    value = int(255*value) # value from 0 to 1
+    wnd_exstyle = windll.user32.GetWindowLongA(widget, -20)
+    new_exstyle = wnd_exstyle | 0x00080000  
+    windll.user32.SetWindowLongA(widget, -20, new_exstyle)  
+    windll.user32.SetLayeredWindowAttributes(widget, 0, value, 2)
+
 main_window = tk.Tk()
 main_window.geometry("900x700")
 main_window.minsize(900,700)
@@ -42,18 +52,24 @@ def printKey_window() -> None:
     create_key_windowButton.config(font="Helvetica 12")
     print_key_windowButton.config(font="Helvetica 12 bold")
     lehrstuhl_input.set("Lehrstuhl auswählen")
-
-    browse_txt.grid_remove()
-    txt_entry.grid_remove() 
+    #browse_txt.grid_remove()
+    #txt_entry.grid_remove()
+    def remove_createKey_window() -> None:
+        for widget in createKey_windowsLayout.keys():
+            set_opacity(widget, 0)
+    
+    remove_createKey_window()
 
 def createKey_window() -> None:
     database_entries_dropdown.grid_remove()
     create_key_windowButton.config(font="Helvetica 12 bold")
     print_key_windowButton.config(font="Helvetica 12")
-    #database_entries_dropdown.set("Bitlocker auswählen")
-    # Die Widgets basierend auf dem Layout-Dict platzieren:
-    for widget, layout in createKey_windowsLayout.items():
-        widget.grid(**layout)
+    def enable_createKey_window() -> None:
+        for widget in createKey_windowsLayout.keys():
+            set_opacity(widget, 1)
+    enable_createKey_window()
+    
+    
 
 def getKeyTxtFile() -> None:
     keyObject.txt_path = filedialog.askopenfilename(initialdir="/",title="Öffne die .txt-Datei", filetypes=[("Text Files","*txt")])
