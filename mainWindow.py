@@ -18,8 +18,6 @@ from io import StringIO
 from datetime import date
 
 keyObject = None
-create_key = True
-print_key = False
 
 ############################################
 # Laden des Key Objects aus der Binärdatei #
@@ -40,19 +38,19 @@ database = PyKeePass(keyObject.database_path, keyObject.password)
 ###  FUNKTIONEN  ###
 ####################
 def printKey_window() -> None:
-    database_entries_dropdown.grid(row=1, column=1, sticky='wn', padx=(20,0))
-    #create_key_windowButton.config(font="Helvetica 12")
-    #print_key_windowButton.config(font="Helvetica 12 bold")
+    database_entries_dropdown.grid(row=1, column=1, sticky='we',padx=(20, 0))
+    create_key_windowButton.config(font="Helvetica 12")
+    print_key_windowButton.config(font="Helvetica 12 bold")
     lehrstuhl_input.set("Lehrstuhl auswählen")
-    # Verstecken der Widgets basierend auf dem Layout-Dict
-    for widget in createKey_windowsLayout.keys():
-        widget.grid_remove()
+
+    browse_txt.grid_remove()
+    txt_entry.grid_remove() 
 
 def createKey_window() -> None:
     database_entries_dropdown.grid_remove()
-    #create_key_windowButton.config(font="Helvetica 12 bold")
-    #print_key_windowButton.config(font="Helvetica 12")
-    database_entries_dropdown.set("Bitlocker auswählen")
+    create_key_windowButton.config(font="Helvetica 12 bold")
+    print_key_windowButton.config(font="Helvetica 12")
+    #database_entries_dropdown.set("Bitlocker auswählen")
     # Die Widgets basierend auf dem Layout-Dict platzieren:
     for widget, layout in createKey_windowsLayout.items():
         widget.grid(**layout)
@@ -123,11 +121,8 @@ style = ttk.Style(main_window)
 style.theme_use("vista")
 main_window.iconbitmap(default="keymaker_images/lockSymbol.ico")
 
-debugstyle = ttk.Style()
-debugstyle.configure("debugStyle",background="red")
-
 create_key_windowButton = ttk.Label(main_window,text="Key erstellen",font="Helvetica 12 bold")
-print_key_windowButton = ttk.Label(main_window,text="Key drucken", font="Helvetica 12 bold")
+print_key_windowButton = ttk.Label(main_window,text="Key drucken", font="Helvetica 12")
 
 trennlinie = tk.Frame(main_window,bg='grey',width=1)
 
@@ -167,7 +162,7 @@ bitlocker_bezeichner_input = ttk.Entry(main_window, font=("Helvetica 12"))
 create_pdf_checkButton = tk.Checkbutton(main_window, text="PDF erstellen",variable=create_pdf, font="Helvetica 12")
 create_key_button = ttk.Button(main_window, text="Key erstellen")
 ###########################################################################
-database_entries_dropdown = ttk.Combobox(main_window, textvariable=lehrstuhl_var, values=create_entriesLst(database), font=("Helvetica", 12),width=50)
+database_entries_dropdown = ttk.Combobox(main_window, textvariable=lehrstuhl_var, values=create_entriesLst(database), font=("Helvetica", 12))
 database_entries_dropdown.set("Bitlocker auswählen")
 
 main_window.columnconfigure(0,weight=1)
