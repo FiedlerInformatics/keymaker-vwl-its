@@ -34,6 +34,52 @@ main_window.minsize(900,700)
 main_window.title("Keymaker")
 
 create_pdf = tk.BooleanVar(master=main_window,value=True)
+####################
+###  FUNKTIONEN  ###
+####################
+def getKeyTxtFile() -> None:
+    keyObject.txt_path = filedialog.askopenfilename(initialdir="/",title="Öffne die .txt-Datei", filetypes=[("Text Files","*txt")])
+    if keyObject.txt_path:
+        # Löschen des Eintrags im Textfeld
+        txt_entry.delete(0,tk.END)
+        try:
+            keyObject.id, keyObject.key = extract_ID_KEY(remove_CRLF(keyObject.txt_path))
+            # Einfügen des Pfades, id und des Keys in die Textfelder
+            txt_entry.insert(0,keyObject.txt_path)
+            bitlocker_bezeichner_input.insert(0,keyObject.id)
+            bitlocker_key_input.insert(0,keyObject.key)
+        except TypeError as e:
+            # Ausgeben der Fehlermeldung im Textfeld 
+             txt_entry.insert(0,"kein gültiger Key" + str(e))
+
+def extract_ID_KEY(file):
+        content = file.read()
+        identifier_pattern = r"[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}"
+        recovery_key_pattern = r"[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}"
+
+        identifierMatchObj = re.search(identifier_pattern, content)
+        identifier = identifierMatchObj.group() if identifierMatchObj else None
+
+        recovery_keyMatchObj = re.search(recovery_key_pattern, content)
+        recovery_key = recovery_keyMatchObj.group() if recovery_keyMatchObj else None
+
+        if identifier is None:
+            raise TypeError("TypeError: No Identifier found")
+        elif recovery_key is None:
+            raise TypeError("TypeError: No Bitlocker-key found")
+        else: 
+            return identifier, recovery_key
+
+def remove_CRLF(file_path):
+        with open(file_path, "r") as file:
+            content = file.read()
+            clean_content = content.replace('\r', '')
+            clean_content = ''.join(filter(lambda x: x.isprintable() or x == '\n', clean_content))
+            file_curr = StringIO()
+            file_curr.write(clean_content)
+            file_curr.seek(0)
+            
+        return file_curr
 
 style = ttk.Style(main_window)
 style.theme_use("vista")
@@ -127,49 +173,6 @@ bitlocker_key_input.grid(row=13, column=1, sticky='wes', columnspan=3, padx=(20,
 create_pdf_checkButton.grid(row=15,column=1,sticky='wn',padx=(20,0))
 create_key_button.grid(row=15,column=3,sticky='en',padx=(0,20))
 
-def getKeyTxtFile() -> None:
-    keyObject.txt_path = filedialog.askopenfilename(initialdir="/",title="Öffne die .txt-Datei", filetypes=[("Text Files","*txt")])
-    if keyObject.txt_path:
-        # Löschen des Eintrags im Textfeld
-        txt_entry.delete(0,tk.END)
-        try:
-            keyObject.id, keyObject.key = extract_ID_KEY(remove_CRLF(keyObject.txt_path))
-            # Einfügen des Pfades, id und des Keys in die Textfelder
-            txt_entry.insert(0,keyObject.txt_path)
-            bitlocker_bezeichner_input.insert(0,keyObject.id)
-            bitlocker_key_input.insert(0,keyObject.key)
-        except TypeError as e:
-            # Ausgeben der Fehlermeldung im Textfeld 
-             txt_entry.insert(0,"kein gültiger Key" + str(e))
-
-def extract_ID_KEY(file):
-        content = file.read()
-        identifier_pattern = r"[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}"
-        recovery_key_pattern = r"[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}"
-
-        identifierMatchObj = re.search(identifier_pattern, content)
-        identifier = identifierMatchObj.group() if identifierMatchObj else None
-
-        recovery_keyMatchObj = re.search(recovery_key_pattern, content)
-        recovery_key = recovery_keyMatchObj.group() if recovery_keyMatchObj else None
-
-        if identifier is None:
-            raise TypeError("TypeError: No Identifier found")
-        elif recovery_key is None:
-            raise TypeError("TypeError: No Bitlocker-key found")
-        else: 
-            return identifier, recovery_key
-
-def remove_CRLF(file_path):
-        with open(file_path, "r") as file:
-            content = file.read()
-            clean_content = content.replace('\r', '')
-            clean_content = ''.join(filter(lambda x: x.isprintable() or x == '\n', clean_content))
-            file_curr = StringIO()
-            file_curr.write(clean_content)
-            file_curr.seek(0)
-            
-        return file_curr
 
 # Konfiguration der Buttons    
 browse_txt.configure(command=getKeyTxtFile)
