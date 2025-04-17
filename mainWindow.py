@@ -39,6 +39,15 @@ database = PyKeePass(keyObject.database_path, keyObject.password)
 ####################
 ###  FUNKTIONEN  ###
 ####################
+def printKey_window() -> None:
+    create_key_windowButton.config(font="Helvetica 12")
+    print_key_windowButton.config(font="Helvetica 12 bold")
+    widgets_to_hide = [browse_txt, txt_entry, person_label, person_input, geraet_label, geraet_input, lehrstuhl_label, lehrstuhl_input, seriennummer_label, seriennummer_input,
+                       datum_label, datum_input, inventarnummer_label, inventarnummer_input,hilfskraft_label, hilfskraft_input, bitlocker_key_label, bitlocker_key_input, bitlocker_bezeichner_label, bitlocker_bezeichner_input, create_pdf_checkButton,create_key_button
+                      ]
+    for widget in widgets_to_hide:
+        widget.grid_forget()
+
 def getKeyTxtFile() -> None:
     keyObject.txt_path = filedialog.askopenfilename(initialdir="/",title="Öffne die .txt-Datei", filetypes=[("Text Files","*txt")])
     if keyObject.txt_path:
@@ -54,7 +63,7 @@ def getKeyTxtFile() -> None:
             # Ausgeben der Fehlermeldung im Textfeld 
              txt_entry.insert(0,"kein gültiger Key" + str(e))
 
-def extract_ID_KEY(file):
+def extract_ID_KEY(file) -> tuple:
         content = file.read()
         identifier_pattern = r"[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}"
         recovery_key_pattern = r"[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}-[0-9]{6}"
@@ -72,7 +81,7 @@ def extract_ID_KEY(file):
         else: 
             return identifier, recovery_key
 
-def remove_CRLF(file_path):
+def remove_CRLF(file_path) -> StringIO:
         with open(file_path, "r") as file:
             content = file.read()
             clean_content = content.replace('\r', '')
@@ -183,10 +192,11 @@ bitlocker_key_input.grid(row=13, column=1, sticky='wes', columnspan=3, padx=(20,
 
 create_pdf_checkButton.grid(row=15,column=1,sticky='wn',padx=(20,0))
 create_key_button.grid(row=15,column=3,sticky='en',padx=(0,20))
-
-
-# Konfiguration der Buttons    
+#############################
+# Konfiguration der Buttons #    
+#############################
 browse_txt.configure(command=getKeyTxtFile)
+print_key_windowButton.bind("<Button-1>", lambda event: printKey_window())
 
 main_window.mainloop()
 
