@@ -16,8 +16,8 @@ import pyAesCrypt
 import configparser
 
 
-databasepath = 'databasePath.ini'
-INIexists = False
+INIpath = 'databasePath.ini' # Pfad zur INI-Datei
+corruptDatabasePath = False
 
 #############################
 # ERSTELLEN DES KEY OBJECTS #
@@ -30,7 +30,94 @@ login_window = tk.Tk()
 login_window.geometry("700x433")
 login_window.resizable(False,False)
 login_window.title("Keymaker")
+########################################################
+def getDataBase() -> None:
+    global corruptDatabasePath
+    password_entry.delete(0, tk.END)  # Löschen des Passwortfeldes
+    database_entry.delete(0, tk.END)  # Löschen des Datenbankpfad-Feldes
 
+    if not os.path.isfile(INIpath):
+        # Wenn keine INI-Datei vorhanden ist, öffne den Dateiauswahldialog
+        keyObject.database_path = filedialog.askopenfilename(
+            title="Datenbank auswählen",
+            filetypes=[("KeePass Database", "*.kdbx")],
+        )
+        if keyObject.database_path:
+            database_entry.insert(0, keyObject.database_path)
+            database_entry.config(fg="black")
+            error_message.config(text="")
+            corruptDatabasePath = False
+    else:
+        try:
+            databasepathFromINI = get_database_path()
+        except Exception as e:
+            error_message.config(text="Fehler beim Lesen der INI-Datei", fg="red")
+            corruptDatabasePath = True
+            return
+
+        if os.path.isfile(databasepathFromINI):
+            # Gültiger Pfad aus INI
+            keyObject.database_path = databasepathFromINI
+            database_entry.insert(0, databasepathFromINI)
+            database_entry.config(fg="black")
+            error_message.config(text="")
+            corruptDatabasePath = False
+        else:
+            # Ungültiger Pfad -> Fehlermeldung & Dateiauswahl
+            error_message.config(text="Dateipfad inkorrekt", fg="red")
+            database_entry.insert(0, databasepathFromINI)
+            database_entry.config(fg="red")
+            corruptDatabasePath = True
+
+            # --> Neue Auswahl ermöglichen
+            new_path = filedialog.askopenfilename(
+                title="Datenbank auswählen",
+                filetypes=[("KeePass Database", "*.kdbx")],
+            )
+            if new_path:
+                keyObject.database_path = new_path
+                database_entry.delete(0, tk.END)
+                database_entry.insert(0, new_path)
+                database_entry.config(fg="black")
+                error_message.config(text="")
+                corruptDatabasePath = False
+        
+def login() -> None:
+    if len(keyObject.database_path) == 0:
+        error_message.config(text="Es wurde keine Datei ausgewählt", fg="red")
+        print(keyObject.database_path)
+    else:
+        if not check_password():
+            error_message.config(text="Falsches Passwort", fg="red")
+            return
+        else:       
+            keyObject.password = password_entry.get()
+            keyObject.database_path = database_entry.get()
+            write_INI(keyObject.database_path) # Speichern des Pfades in der INI-Datei
+            open_mainWindow()
+
+def get_database_path() -> str:
+    config = configparser.ConfigParser()
+    config.read(INIpath)
+    if 'Path' not in config or 'lastDatabasePath' not in config['Path']:
+        raise ValueError("Path section not found in the config file.") 
+    return config['Path']['lastDatabasePath']
+
+def write_INI(path:str) -> None:
+    config = configparser.ConfigParser()
+    config['Path'] = {'lastDatabasePath': path}
+    with open(INIpath, 'w') as configfile:
+        config.write(configfile)
+
+
+
+def check_password() -> bool:
+    try: pk= PyKeePass(database_entry.get(), password=password_entry.get())
+    except pykeepass.exceptions.CredentialsError:
+        return False
+    return True
+
+############################################################
 style = ttk.Style()
 style.theme_use("vista")
 login_window.iconbitmap(default="keymaker_images/lockSymbol.ico")
@@ -41,10 +128,10 @@ image_label = ttk.Label(login_window, image=image)
 keymakerHeader = ttk.Label(login_window,text="Keymaker",font="Helvetica 40 bold")
 datenbankAuswahlMeldung = ttk.Label(login_window, text="Wählen Sie eine .kdbx-Datei", font="Helvetica")
 
-error_message = tk.Label(login_window, text="")
+error_message = tk.Label(login_window, text="", font="Helvetica 12", fg="red")
 
 browse_database = ttk.Button(text=".kdbx-Datei")
-database_entry = ttk.Entry(login_window, width=50)
+database_entry = tk.Entry(login_window, width=50)
 
 password_label = ttk.Label(login_window, text="Password", font="Helvetica 10")
 password_entry = ttk.Entry(login_window, show="●", width=50)
@@ -71,37 +158,6 @@ login_button.place(x=430,y=357)
 
 
 
-
-def getDataBase() -> None:
-    keyObject.database_path = filedialog.askopenfilename(initialdir="/",title="Öffne die KeePass Datenbank", filetypes=[("KeePass Database Files","*kdbx")])
-    if keyObject.database_path:
-        database_entry.delete(0,tk.END)
-        database_entry.insert(0,keyObject.database_path)
-        print(keyObject.database_path)
-
-def check_file_type(filepath, extension) -> bool:
-    return Path(filepath).suffix.lower() == extension.lower()
-
-def check_password() -> bool:
-    try: pk= PyKeePass(database_entry.get(), password=password_entry.get())
-    except pykeepass.exceptions.CredentialsError:
-        return False
-    return True
-
-def login() -> None:
-    if len(keyObject.database_path) == 0:
-        error_message.config(text="Es wurde keine Datei ausgewählt", fg="red")
-        print(keyObject.database_path)
-    else:
-        if not check_password():
-            error_message.config(text="Falsches Passwort", fg="red")
-            return
-        else:       
-            keyObject.password = password_entry.get()
-            keyObject.database_path = database_entry.get()
-            open_mainWindow()
-            print("opened mainWindow called")
-
 def serialisation(kpo: Key) -> None:
     with open("keyObj.pickle", "wb") as f:
         pickle.dump(kpo, f)
@@ -125,25 +181,22 @@ def open_mainWindow() -> None:
     write_INI(database_entry.get()) # Speichern des Pfades in der INI-Datei
     login_window.destroy()
 
-def get_database_path() -> str:
-    config = configparser.ConfigParser()
-    config.read(databasepath)
-    if 'Path' not in config or 'lastDatabasePath' not in config['Path']:
-        raise ValueError("Path section not found in the config file.") 
-    return config['Path']['lastDatabasePath']
+# Überprüfen, ob die INI-Datei existiert und den Pfad auslesen
 
-def write_INI(path:str) -> None:
-    config = configparser.ConfigParser()
-    config['Path'] = {'lastDatabasePath': path}
-    with open(databasepath, 'w') as configfile:
-        config.write(configfile)
+if os.path.isfile(INIpath):
+    # Überprüfen, ob der Pfad in der INI-Datei gültig ist
+    databasepath = get_database_path()
+    if os.path.isfile(databasepath):
+        keyObject.database_path = get_database_path()
+        database_entry.insert(0, databasepath) # Einfügen des Pfades in das Entry-Feld
+    else:
+        error_message.config(text="Dateipfad inkorrekt", fg="red")
+        database_entry.insert(0,databasepath)
+        database_entry.config(fg="red")
+        corruptDatabasePath = True
+# Überprüfen, ob er Dateipfad korrigiert wurde
 
-if os.path.isfile(databasepath):
-    database_entry.insert(0, get_database_path()) # Einfügen des Pfades aus der ini-Datei
-    INIexists = True
-else:
-    INIexists = False
-
+        
 browse_database.configure(command=getDataBase)    # Konfiguration der Buttons
 login_button.configure(command=login)
 

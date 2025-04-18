@@ -19,6 +19,7 @@ import sys
 from io import StringIO
 from datetime import date
 from ctypes import windll
+from configparser import ConfigParser
 
 keyObject = None
 
@@ -32,7 +33,7 @@ try:
     pyAesCrypt.decryptFile("keyObjPickle.aes","obj_de.pickle", password, 64 * 1024)
 except FileNotFoundError as e:
     print(f"Decryption Error: {e}")
-    
+
 with open("obj_de.pickle", "rb") as f:
     keyObject = pickle.load(f)
     f.close()
@@ -81,8 +82,6 @@ def createKey_window() -> None:
             set_opacity(widget, 1)
     enable_createKey_window()
     
-    
-
 def getKeyTxtFile() -> None:
     keyObject.txt_path = filedialog.askopenfilename(initialdir="/",title="Öffne die .txt-Datei", filetypes=[("Text Files","*txt")])
     if keyObject.txt_path:
@@ -191,7 +190,7 @@ create_pdf_checkButton = tk.Checkbutton(main_window, text="PDF erstellen",variab
 create_key_button = ttk.Button(main_window, text="Key erstellen")
 ###########################################################################
 database_entries_dropdown = ttk.Combobox(main_window, textvariable=lehrstuhl_var, values=create_entriesLst(database), font=("Helvetica", 12))
-database_entries_dropdown.set("Bitlocker auswählen")
+database_entries_dropdown.set("Key auswählen")
 
 main_window.columnconfigure(0,weight=1)
 main_window.columnconfigure(1,weight=1)
@@ -201,7 +200,6 @@ for col in (1, 3):
     main_window.columnconfigure(col, weight=3)
 for row in range(16):
     main_window.rowconfigure(row, weight=1)
-
 
 main_window.columnconfigure(0, minsize=150)
 
