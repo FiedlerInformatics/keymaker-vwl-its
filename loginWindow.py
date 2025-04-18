@@ -13,6 +13,12 @@ import sys
 import os
 import pickle
 import pyAesCrypt
+import configparser
+
+
+databasepath = 'databasePath.ini'
+INIexists = False
+
 #############################
 # ERSTELLEN DES KEY OBJECTS #
 #############################
@@ -62,6 +68,10 @@ login_button.place(x=430,y=357)
 ##############
 # FUNKTIONEN #
 ##############
+
+
+
+
 def getDataBase() -> None:
     keyObject.database_path = filedialog.askopenfilename(initialdir="/",title="Öffne die KeePass Datenbank", filetypes=[("KeePass Database Files","*kdbx")])
     if keyObject.database_path:
@@ -106,19 +116,35 @@ def encrypt() -> None:
 
 def open_mainWindow() -> None:
     serialisation(keyObject) # Serialisierung des KeyObjects
-    print("Serialisation done")
     encrypt()               # Verschlüsselung der pickle-Datei
-    print("Encryption done")
     os.remove("keyObj.pickle")
-    print("pickle deleted")
     subprocess.Popen(                             # Starten des Hauptfensters
         [sys.executable, "mainWindow.py"] ,
         creationflags=subprocess.CREATE_NO_WINDOW # Verhinderd das Öffnen eines Konsolenfensters
     )
-    print("mainWindow started")
+    write_INI(database_entry.get()) # Speichern des Pfades in der INI-Datei
     login_window.destroy()
+
+def get_database_path() -> str:
+    config = configparser.ConfigParser()
+    config.read(databasepath)
+    if 'Path' not in config or 'lastDatabasePath' not in config['Path']:
+        raise ValueError("Path section not found in the config file.") 
+    return config['Path']['lastDatabasePath']
+
+def write_INI(path:str) -> None:
+    config = configparser.ConfigParser()
+    config['Path'] = {'lastDatabasePath': path}
+    with open(databasepath, 'w') as configfile:
+        config.write(configfile)
+
+if os.path.isfile(databasepath):
+    database_entry.insert(0, get_database_path()) # Einfügen des Pfades aus der ini-Datei
+    INIexists = True
+else:
+    INIexists = False
 
 browse_database.configure(command=getDataBase)    # Konfiguration der Buttons
 login_button.configure(command=login)
 
-login_window.mainloop()                           # Aktualisierung der Eingabe
+login_window.mainloop()                          
