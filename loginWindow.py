@@ -10,7 +10,9 @@ from pathlib import Path
 from PIL import ImageTk, Image
 import subprocess
 import sys
+import os
 import pickle
+import pyAesCrypt
 #############################
 # ERSTELLEN DES KEY OBJECTS #
 #############################
@@ -88,15 +90,32 @@ def login() -> None:
             keyObject.password = password_entry.get()
             keyObject.database_path = database_entry.get()
             open_mainWindow()
+            print("opened mainWindow called")
+
+def serialisation(kpo: Key) -> None:
+    with open("keyObj.pickle", "wb") as f:
+        pickle.dump(kpo, f)
+        f.close()
+
+def encrypt() -> None:
+    password = "long-and-random-password"
+    try:
+        pyAesCrypt.encryptFile("keyObj.pickle", "keyObjPickle.aes", password, 64 * 1024)
+    except FileNotFoundError as e:
+        print(f"Encryption Error: {e}")
 
 def open_mainWindow() -> None:
-   with open("keyObj.pickle", "wb") as f:
-    pickle.dump(keyObject, f)
-    f.close()
+    serialisation(keyObject) # Serialisierung des KeyObjects
+    print("Serialisation done")
+    encrypt()               # Verschlüsselung der pickle-Datei
+    print("Encryption done")
+    os.remove("keyObj.pickle")
+    print("pickle deleted")
     subprocess.Popen(                             # Starten des Hauptfensters
         [sys.executable, "mainWindow.py"] ,
         creationflags=subprocess.CREATE_NO_WINDOW # Verhinderd das Öffnen eines Konsolenfensters
     )
+    print("mainWindow started")
     login_window.destroy()
 
 browse_database.configure(command=getDataBase)    # Konfiguration der Buttons

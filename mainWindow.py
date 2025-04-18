@@ -14,6 +14,8 @@ import subprocess
 import pickle
 import os
 import re
+import pyAesCrypt
+import sys
 from io import StringIO
 from datetime import date
 from ctypes import windll
@@ -23,9 +25,19 @@ keyObject = None
 ############################################
 # Laden des Key Objects aus der Binärdatei #
 ############################################
-with open("keyObj.pickle", "rb") as f:
+
+# Entschlüsseln der aes256 Datei
+password = "long-and-random-password"
+try:
+    pyAesCrypt.decryptFile("keyObjPickle.aes","obj_de.pickle", password, 64 * 1024)
+except FileNotFoundError as e:
+    print(f"Decryption Error: {e}")
+    
+with open("obj_de.pickle", "rb") as f:
     keyObject = pickle.load(f)
-#os.remove("keyObj.pickle") # Löschen der Binärdatei
+    f.close()
+os.remove("obj_de.pickle") # Löschen der unverschlüsselten pickle-Datei
+os.remove("keyObjPickle.aes") # Löschen der verschlüsselten pickle-Datei
 ############################################
 
 def set_opacity(widget, value: float):
