@@ -36,24 +36,21 @@ def getDataBase() -> None:
     password_entry.delete(0, tk.END)  # Löschen des Passwortfeldes
     database_entry.delete(0, tk.END)  # Löschen des Datenbankpfad-Feldes
 
-    if not os.path.isfile(INIpath):
-        # Wenn keine INI-Datei vorhanden ist, öffne den Dateiauswahldialog
-        keyObject.database_path = filedialog.askopenfilename(
-            title="Datenbank auswählen",
-            filetypes=[("KeePass Database", "*.kdbx")],
-        )
-        if keyObject.database_path:
-            database_entry.insert(0, keyObject.database_path)
-            database_entry.config(fg="black")
-            error_message.config(text="")
-            corruptDatabasePath = False
-    else:
-        try:
-            databasepathFromINI = get_database_path()
-        except Exception as e:
-            error_message.config(text="Fehler beim Lesen der INI-Datei", fg="red")
-            corruptDatabasePath = True
-            return
+    # Wenn keine INI-Datei vorhanden ist, öffne den Dateiauswahldialog
+    keyObject.database_path = filedialog.askopenfilename(
+        title="Datenbank auswählen",
+        filetypes=[("KeePass Database", "*.kdbx")],
+    )
+    if keyObject.database_path:
+        database_entry.insert(0, keyObject.database_path)
+        database_entry.config(fg="black")
+        error_message.config(text="")
+        corruptDatabasePath = False
+    try:
+        databasepathFromINI = get_database_path()
+    except Exception as e:
+        error_message.config(text="Fehler beim Lesen der INI-Datei", fg="red")
+        corruptDatabasePath = True
 
         if os.path.isfile(databasepathFromINI):
             # Gültiger Pfad aus INI
