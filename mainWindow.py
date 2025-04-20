@@ -37,10 +37,14 @@ except FileNotFoundError as e:
 with open("obj_de.pickle", "rb") as f:
     keyObject = pickle.load(f)
     f.close()
-os.remove("obj_de.pickle") # Löschen der unverschlüsselten pickle-Datei
-os.remove("keyObjPickle.aes") # Löschen der verschlüsselten pickle-Datei
+#os.remove("obj_de.pickle") # Löschen der unverschlüsselten pickle-Datei
+#os.remove("keyObjPickle.aes") # Löschen der verschlüsselten pickle-Datei
 ############################################
 
+print("Daten nach der Derealisation:")
+print(keyObject)
+
+# https://stackoverflow.com/questions/77840560/why-opacity-in-tkinter-widgets-not-supported
 def set_opacity(widget, value: float):
     widget = widget.winfo_id()
     value = int(255*value) # value from 0 to 1
@@ -57,20 +61,15 @@ main_window.title("Keymaker")
 create_pdf = tk.BooleanVar(master=main_window,value=True)
 database = PyKeePass(keyObject.database_path, keyObject.password)
 
-####################
-###  FUNKTIONEN  ###
-####################
+def remove_createKey_window() -> None:
+    for widget in createKey_windowsLayout.keys():
+        set_opacity(widget, 0)
+
 def printKey_window() -> None:
     database_entries_dropdown.grid(row=1, column=1, sticky='we',padx=(20, 0))
     create_key_windowButton.config(font="Helvetica 12")
     print_key_windowButton.config(font="Helvetica 12 bold")
     lehrstuhl_input.set("Lehrstuhl auswählen")
-    #browse_txt.grid_remove()
-    #txt_entry.grid_remove()
-    def remove_createKey_window() -> None:
-        for widget in createKey_windowsLayout.keys():
-            set_opacity(widget, 0)
-    
     remove_createKey_window()
 
 def createKey_window() -> None:
@@ -81,8 +80,24 @@ def createKey_window() -> None:
         for widget in createKey_windowsLayout.keys():
             set_opacity(widget, 1)
     enable_createKey_window()
-    
+
+# Entferne alle Eingaben aus den Inputfeldern des main windows
+def clear_mainWindow_inputFields() -> None:
+    person_input.delete(0, tk.END)
+    geraet_input.delete(0, tk.END)
+    seriennummer_input.delete(0, tk.END)
+    hilfskraft_input.delete(0, tk.END)
+    inventarnummer_input.delete(0, tk.END)
+    datum_input.delete(0, tk.END)
+    lehrstuhl_input.set("Lehrstuhl auswählen")
+    bitlocker_key_input.delete(0, tk.END)
+    bitlocker_bezeichner_input.delete(0, tk.END)
+    txt_entry.delete(0, tk.END)
+    mainWindow_error.config(text="")
+    mainWindow_success.config(text="")
+
 def getKeyTxtFile() -> None:
+    clear_mainWindow_inputFields() # Löschen der Eingaben im main window
     keyObject.txt_path = filedialog.askopenfilename(initialdir="/",title="Öffne die .txt-Datei", filetypes=[("Text Files","*txt")])
     if keyObject.txt_path:
         # Löschen des Eintrags im Textfeld
@@ -129,9 +144,9 @@ def create_lehrstuhlLst(PyKeePass) -> list[str]:
      regex = r'General/Bitlocker/.*'
      strLst = []
      for i in range(len(PyKeePass.groups)): 
-         strVar = str(PyKeePass.groups[i]).replace('Group: ', '').replace('"','')
-         if re.match(regex, strVar): 
-             strLst.append(strVar.replace('General/Bitlocker/', ''))
+        strVar = str(PyKeePass.groups[i]).replace('Group: ', '').replace('"','')
+        if re.match(regex, strVar): 
+            strLst.append(strVar.replace('General/Bitlocker/', ''))
      return strLst
 
 def create_entriesLst(PyKeePass) -> list[str]:
@@ -142,7 +157,83 @@ def create_entriesLst(PyKeePass) -> list[str]:
         if re.match(regex, strVar): 
             strLst.append(strVar.replace('(None)', ''))
     return strLst
- 
+
+# Lese die Eingabe aus den Textfeldern und speichere sie in den Attributen des Key-Objekts
+
+def get_fieldInputs() -> None:
+    keyObject.txt_path = txt_entry.get()
+    keyObject.user = person_input.get()
+    keyObject.geraet = geraet_input.get()
+    keyObject.lehrstuhl = lehrstuhl_input.get()
+    keyObject.serienNummer = seriennummer_input.get()
+    keyObject.date = datum_input.get()
+    keyObject.ivs = inventarnummer_input.get()
+    keyObject.hiwi = hilfskraft_input.get()
+    keyObject.id = bitlocker_bezeichner_input.get()
+    keyObject.key = bitlocker_key_input.get()
+
+def checkFor_personInput_change() -> None:
+    current = person_input.get()
+    if current != checkFor_personInput_change.last_value:
+        person_input.config(fg="black")
+        geraet_input.config(fg="black")
+        mainWindow_error.config(text="")
+    else:
+        person_input.config(fg="red")
+    main_window.after(100, checkFor_personInput_change)	
+
+def checkFor_geraetInput_change() -> None:
+    current = geraet_input.get()
+    if current != checkFor_geraetInput_change.last_value:
+        geraet_input.config(fg="black")
+        person_input.config(fg="black")
+        mainWindow_error.config(text="")
+    else:
+        geraet_input.config(fg="red")
+    main_window.after(100, checkFor_geraetInput_change)
+
+def create_keyEntry(keyObj:Key) -> None:
+    mainWindow_error.config(text="") # Löschen der vorherigen Fehlermeldung
+    person_input.config(fg="black")
+    geraet_input.config(fg="black")
+
+    get_fieldInputs()
+    kp = PyKeePass(keyObj.database_path,keyObj.password)
+
+    existingEntry = kp.find_entries(title=keyObj.user + " " + keyObj.geraet, first=True)
+    if existingEntry:
+        set_opacity(mainWindow_success, 0)
+        mainWindow_error.config(text="Eintrag mit dieser Bezeichnung existiert bereits", fg="red")
+        mainWindow_success
+        person_input.config(fg="red")
+        geraet_input.config(fg="red")
+        checkFor_personInput_change.last_value = person_input.get()
+        checkFor_geraetInput_change.last_value = geraet_input.get()
+        raise ValueError("Eintrag existiert bereits")
+
+    generalGroup = kp.find_groups(name='General',first=True)
+    entry = kp.add_entry(
+        generalGroup,
+        title = keyObj.user + " " + keyObj.geraet,
+        username = keyObj.user,
+        password = keyObj.key # Bitlocker key
+    )
+    entry.set_custom_property("Name", keyObj.user)
+    entry.set_custom_property("Wiederherstellungsschluessel", keyObj.key)
+    entry.set_custom_property("Bezeichner", keyObj.id)
+    entry.set_custom_property("Gerät", keyObj.geraet)
+    entry.set_custom_property("Datum", keyObj.date)
+    entry.set_custom_property("Lehrstuhl", keyObj.lehrstuhl)
+    entry.set_custom_property("Hilfskraft", keyObj.hiwi)
+
+    entry.set_custom_property("Seriennummer", keyObj.serienNummer)
+    entry.set_custom_property("Inventarisierungsnummer", keyObj.ivs)
+    
+    set_opacity(mainWindow_success, 1)
+    mainWindow_success.config(text="Eintrag erfolgreich erstellt")
+    kp.save()
+
+
 ######################################################################################
 style = ttk.Style(main_window)
 style.theme_use("vista")
@@ -157,10 +248,10 @@ browse_txt = ttk.Button(main_window, text=".txt-Datei")
 txt_entry = ttk.Entry(main_window, font=("Helvetica 12"))
 
 person_label = ttk.Label(main_window,text="Person", font="Helvetica 12")
-person_input = ttk.Entry(main_window, font=("Helvetica 12"))
+person_input = tk.Entry(main_window, font=("Helvetica 12"))
 
 geraet_label = ttk.Label(main_window,text="Gerät", font="Helvetica 12")
-geraet_input = ttk.Entry(main_window,font=("Helvetica 12"))
+geraet_input = tk.Entry(main_window,font=("Helvetica 12"))
 
 lehrstuhl_label = ttk.Label(main_window, text="Lehrstuhl", font="Helvetica 12")
 lehrstuhl_var = tk.StringVar()
@@ -187,10 +278,14 @@ bitlocker_bezeichner_label = ttk.Label(main_window, text="Bitlocker Bezeichner",
 bitlocker_bezeichner_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
 create_pdf_checkButton = tk.Checkbutton(main_window, text="PDF erstellen",variable=create_pdf, font="Helvetica 12")
+
+mainWindow_error = tk.Label(main_window, text="", font="Helvetica 12", fg="red", width=35, anchor="center",justify= 'center')
+mainWindow_success = tk.Label(main_window, text="", font="Helvetica 12", fg="green", width=35, anchor="center",justify= 'center')
+
 create_key_button = ttk.Button(main_window, text="Key erstellen")
 ###########################################################################
 database_entries_dropdown = ttk.Combobox(main_window, textvariable=lehrstuhl_var, values=create_entriesLst(database), font=("Helvetica", 12))
-database_entries_dropdown.set("Key auswählen")
+database_entries_dropdown.set(" Lehrstuhl auswählen ")
 
 main_window.columnconfigure(0,weight=1)
 main_window.columnconfigure(1,weight=1)
@@ -198,7 +293,7 @@ main_window.columnconfigure(2,weight=1)
 main_window.columnconfigure(4,weight=1)
 for col in (1, 3):
     main_window.columnconfigure(col, weight=3)
-for row in range(16):
+for row in range(17):
     main_window.rowconfigure(row, weight=1)
 
 main_window.columnconfigure(0, minsize=150)
@@ -206,7 +301,7 @@ main_window.columnconfigure(0, minsize=150)
 create_key_windowButton.grid(column=0,row=1,sticky='w',padx=(10,5))
 print_key_windowButton.grid(column=0,row=2,sticky='w',padx=(10,5))
 
-trennlinie.grid(row=0,column=0,sticky="nes",rowspan=20,padx=10)
+trennlinie.grid(row=0,column=0,sticky="nes",rowspan=21,padx=10)
 
 createKey_windowsLayout = {
     browse_txt: {"row": 1, "column": 1, "sticky": 'wn', "padx": (20, 0)},
@@ -230,6 +325,8 @@ createKey_windowsLayout = {
     bitlocker_key_label: {"row": 13, "column": 1, "sticky": 'wn', "padx": (20, 20)},
     bitlocker_key_input: {"row": 13, "column": 1, "sticky": 'wes', "columnspan": 3, "padx": (20, 20)},
     create_pdf_checkButton: {"row": 15, "column": 1, "sticky": 'wn', "padx": (20, 0)},
+    mainWindow_error: {"row": 16, "column": 1, "sticky": 'new', 'columnspan': 5, "padx": (0,0)},
+    mainWindow_success: {"row": 16, "column": 1, "sticky": 'new', 'columnspan': 5, "padx": (0,0)},
     create_key_button: {"row": 15, "column": 3, "sticky": 'en', "padx": (0, 20)},
 }
 
@@ -241,6 +338,13 @@ for widget, layout in createKey_windowsLayout.items():
 browse_txt.configure(command=getKeyTxtFile)
 print_key_windowButton.bind("<Button-1>", lambda event: printKey_window())
 create_key_windowButton.bind("<Button-1>", lambda event: createKey_window())
+create_key_button.bind("<Button-1>", lambda event: create_keyEntry(keyObject))
+
+checkFor_geraetInput_change.last_value = geraet_input.get() # Initialisierung der letzten Eingabe des Geräte-inputs
+checkFor_personInput_change.last_value = person_input.get() # Initialisierung der letzten Eingabe des Person-inputs
+checkFor_geraetInput_change() # Aufruf der Funktion zur Überprüfung der Eingabe im Geräte-input
+checkFor_personInput_change() # Aufruf der Funktion zur Überprüfung der Eingabe im Person-input
+
 main_window.mainloop()
 
     

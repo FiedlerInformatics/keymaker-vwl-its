@@ -33,8 +33,8 @@ login_window.title("Keymaker")
 ########################################################
 def getDataBase() -> None:
     global corruptDatabasePath
-    password_entry.delete(0, tk.END)  # Löschen des Passwortfeldes
-    database_entry.delete(0, tk.END)  # Löschen des Datenbankpfad-Feldes
+    #password_entry.delete(0, tk.END)  # Löschen des Passwortfeldes
+    #database_entry.delete(0, tk.END)  # Löschen des Datenbankpfad-Feldes
 
     # Wenn keine INI-Datei vorhanden ist, öffne den Dateiauswahldialog
     keyObject.database_path = filedialog.askopenfilename(
@@ -106,8 +106,6 @@ def write_INI(path:str) -> None:
     with open(INIpath, 'w') as configfile:
         config.write(configfile)
 
-
-
 def check_password() -> bool:
     try: pk= PyKeePass(database_entry.get(), password=password_entry.get())
     except pykeepass.exceptions.CredentialsError:
@@ -176,10 +174,9 @@ def open_mainWindow() -> None:
         creationflags=subprocess.CREATE_NO_WINDOW # Verhinderd das Öffnen eines Konsolenfensters
     )
     write_INI(database_entry.get()) # Speichern des Pfades in der INI-Datei
-    login_window.destroy()
+    login_window.destroy() # Schließen des Loginfensters
 
 # Überprüfen, ob die INI-Datei existiert und den Pfad auslesen
-
 if os.path.isfile(INIpath):
     # Überprüfen, ob der Pfad in der INI-Datei gültig ist
     databasepath = get_database_path()
