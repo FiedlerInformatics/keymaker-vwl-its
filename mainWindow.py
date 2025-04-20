@@ -88,7 +88,6 @@ def clear_mainWindow_inputFields() -> None:
     seriennummer_input.delete(0, tk.END)
     hilfskraft_input.delete(0, tk.END)
     inventarnummer_input.delete(0, tk.END)
-    datum_input.delete(0, tk.END)
     lehrstuhl_input.set("Lehrstuhl auswählen")
     bitlocker_key_input.delete(0, tk.END)
     bitlocker_bezeichner_input.delete(0, tk.END)
@@ -192,15 +191,22 @@ def checkFor_geraetInput_change() -> None:
         geraet_input.config(fg="red")
     main_window.after(100, checkFor_geraetInput_change)
 
-def create_keyEntry(keyObj:Key) -> None:
+def rename_txt() -> str:
+    newFilename = "Bitlocker" + "_" + keyObject.date + "_" + keyObject.lehrstuhl + "_" + keyObject.user + "_SN-" + keyObject.serienNummer + "hiwi-" + keyObject.hiwi + ".txt"
+    newFilename = newFilename.replace("/"," ").replace("\\","").replace(":"," ").replace("?","").replace("*","").replace("<","").replace(">","")
+    print("Neuer Dateiname: " + newFilename)
+    print("Alter Dateiname: " + keyObject.txt_path)
+    return newFilename
+
+def create_keyEntry() -> None:
     mainWindow_error.config(text="") # Löschen der vorherigen Fehlermeldung
     person_input.config(fg="black")
     geraet_input.config(fg="black")
 
     get_fieldInputs()
-    kp = PyKeePass(keyObj.database_path,keyObj.password)
+    kp = PyKeePass(keyObject.database_path,keyObject.password)
 
-    existingEntry = kp.find_entries(title=keyObj.user + " " + keyObj.geraet, first=True)
+    existingEntry = kp.find_entries(title=keyObject.user + " " + keyObject.geraet, first=True)
     if existingEntry:
         set_opacity(mainWindow_success, 0)
         mainWindow_error.config(text="Eintrag mit dieser Bezeichnung existiert bereits", fg="red")
@@ -214,25 +220,28 @@ def create_keyEntry(keyObj:Key) -> None:
     generalGroup = kp.find_groups(name='General',first=True)
     entry = kp.add_entry(
         generalGroup,
-        title = keyObj.user + " " + keyObj.geraet,
-        username = keyObj.user,
-        password = keyObj.key # Bitlocker key
+        title = keyObject.user + " " + keyObject.geraet,
+        username = keyObject.user,
+        password = keyObject.key # Bitlocker key
     )
-    entry.set_custom_property("Name", keyObj.user)
-    entry.set_custom_property("Wiederherstellungsschluessel", keyObj.key)
-    entry.set_custom_property("Bezeichner", keyObj.id)
-    entry.set_custom_property("Gerät", keyObj.geraet)
-    entry.set_custom_property("Datum", keyObj.date)
-    entry.set_custom_property("Lehrstuhl", keyObj.lehrstuhl)
-    entry.set_custom_property("Hilfskraft", keyObj.hiwi)
+    entry.set_custom_property("Name", keyObject.user)
+    entry.set_custom_property("Wiederherstellungsschluessel", keyObject.key)
+    entry.set_custom_property("Bezeichner", keyObject.id)
+    entry.set_custom_property("Gerät", keyObject.geraet)
+    entry.set_custom_property("Datum", keyObject.date)
+    entry.set_custom_property("Lehrstuhl", keyObject.lehrstuhl)
+    entry.set_custom_property("Hilfskraft", keyObject.hiwi)
 
-    entry.set_custom_property("Seriennummer", keyObj.serienNummer)
-    entry.set_custom_property("Inventarisierungsnummer", keyObj.ivs)
-    
+    entry.set_custom_property("Seriennummer", keyObject.serienNummer)
+    entry.set_custom_property("Inventarisierungsnummer", keyObject.ivs)
+
+    with open(keyObject.txt_path, 'rb') as f:
+        binary_id = kp.add_binary(f.read())
+        entry.add_attachment(binary_id,rename_txt())
+
     set_opacity(mainWindow_success, 1)
     mainWindow_success.config(text="Eintrag erfolgreich erstellt")
     kp.save()
-
 
 ######################################################################################
 style = ttk.Style(main_window)
@@ -338,7 +347,7 @@ for widget, layout in createKey_windowsLayout.items():
 browse_txt.configure(command=getKeyTxtFile)
 print_key_windowButton.bind("<Button-1>", lambda event: printKey_window())
 create_key_windowButton.bind("<Button-1>", lambda event: createKey_window())
-create_key_button.bind("<Button-1>", lambda event: create_keyEntry(keyObject))
+create_key_button.bind("<Button-1>", lambda event: create_keyEntry())
 
 checkFor_geraetInput_change.last_value = geraet_input.get() # Initialisierung der letzten Eingabe des Geräte-inputs
 checkFor_personInput_change.last_value = person_input.get() # Initialisierung der letzten Eingabe des Person-inputs
