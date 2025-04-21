@@ -41,9 +41,6 @@ with open("obj_de.pickle", "rb") as f:
 #os.remove("keyObjPickle.aes") # Löschen der verschlüsselten pickle-Datei
 ############################################
 
-print("Daten nach der Derealisation:")
-print(keyObject)
-
 # https://stackoverflow.com/questions/77840560/why-opacity-in-tkinter-widgets-not-supported
 def set_opacity(widget, value: float):
     widget = widget.winfo_id()
@@ -67,19 +64,37 @@ def remove_createKey_window() -> None:
 
 def printKey_window() -> None:
     database_entries_dropdown.grid(row=1, column=1, sticky='we',padx=(20, 0))
+    get_databaseEntrie_button.grid(row=2, column=1, sticky='sw',padx=(20,0))
     create_key_windowButton.config(font="Helvetica 12")
     print_key_windowButton.config(font="Helvetica 12 bold")
-    lehrstuhl_input.set("Lehrstuhl auswählen")
     remove_createKey_window()
 
 def createKey_window() -> None:
     database_entries_dropdown.grid_remove()
     create_key_windowButton.config(font="Helvetica 12 bold")
     print_key_windowButton.config(font="Helvetica 12")
-    def enable_createKey_window() -> None:
-        for widget in createKey_windowsLayout.keys():
-            set_opacity(widget, 1)
-    enable_createKey_window()
+    database_entries_dropdown.set("Key auswählen")
+    for widget in createKey_windowsLayout.keys():
+        set_opacity(widget, 1)
+
+def get_databaseEntry() -> None:
+    entryString = database_entries_dropdown.get()
+    if entryString != "Key auswählen":
+        try:
+            entryString = os.path.basename(entryString)
+            entry = database.find_entries(title=entryString, first=True)
+            keyObject.user = entry.get_custom_property("Name")
+            keyObject.device = entry.get_custom_property("Gerät")
+            keyObject.lehrstuhl = entry.get_custom_property("Lehrstuhl")
+            keyObject.serienNummer = entry.get_custom_property("Seriennummer")
+            keyObject.date = entry.get_custom_property("Datum")
+            keyObject.ivs = entry.get_custom_property("Inventarisierungsnummer")
+            keyObject.hiwi = entry.get_custom_property("Hilfskraft")
+            keyObject.id = entry.get_custom_property("Bezeichner")
+            keyObject.key = entry.get_custom_property("Wiederherstellungsschluessel")
+        except pykeepass.exceptions.KeePassFileError as e:
+            print(f"Error: {e}")
+          
 
 # Entferne alle Eingaben aus den Inputfeldern des main windows
 def clear_mainWindow_inputFields() -> None:
@@ -155,6 +170,9 @@ def create_entriesLst(PyKeePass) -> list[str]:
         strVar = str(PyKeePass.entries[i]).replace('Entry: ', '').replace('"','')
         if re.match(regex, strVar): 
             strLst.append(strVar.replace('(None)', ''))
+    for i in range (len(strLst)):
+        strLst[i] = re.sub(r"[\(\[].*?[\)\]]", "", strLst[i]).strip()
+    print(strLst)
     return strLst
 
 # Lese die Eingabe aus den Textfeldern und speichere sie in den Attributen des Key-Objekts
@@ -194,8 +212,6 @@ def checkFor_geraetInput_change() -> None:
 def rename_txt() -> str:
     newFilename = "Bitlocker" + "_" + keyObject.date + "_" + keyObject.lehrstuhl + "_" + keyObject.user + "_SN-" + keyObject.serienNummer + "hiwi-" + keyObject.hiwi + ".txt"
     newFilename = newFilename.replace("/"," ").replace("\\","").replace(":"," ").replace("?","").replace("*","").replace("<","").replace(">","")
-    print("Neuer Dateiname: " + newFilename)
-    print("Alter Dateiname: " + keyObject.txt_path)
     return newFilename
 
 def create_keyEntry() -> None:
@@ -241,6 +257,9 @@ def create_keyEntry() -> None:
 
     set_opacity(mainWindow_success, 1)
     mainWindow_success.config(text="Eintrag erfolgreich erstellt")
+    print("Name: " + keyObject.user)
+    print("Gerät: " + keyObject.geraet)
+    print("Entry.title: " + entry.title)	
     kp.save()
 
 ######################################################################################
@@ -265,7 +284,7 @@ geraet_input = tk.Entry(main_window,font=("Helvetica 12"))
 lehrstuhl_label = ttk.Label(main_window, text="Lehrstuhl", font="Helvetica 12")
 lehrstuhl_var = tk.StringVar()
 lehrstuhl_input = ttk.Combobox(main_window, textvariable=lehrstuhl_var, values=create_lehrstuhlLst(database), font=("Helvetica", 12))
-lehrstuhl_input.set("Lehrstuhl auswählen")
+lehrstuhl_input.set("Lehrstuhl auswählen") # Setzen des Standardwerts auf "Lehrstuhl auswählen"
 
 seriennummer_label = ttk.Label(main_window, text="Seriennummer", font="Helvetica 12")
 seriennummer_input = ttk.Entry(main_window, font=("Helvetica 12"))
@@ -293,8 +312,10 @@ mainWindow_success = tk.Label(main_window, text="", font="Helvetica 12", fg="gre
 
 create_key_button = ttk.Button(main_window, text="Key erstellen")
 ###########################################################################
-database_entries_dropdown = ttk.Combobox(main_window, textvariable=lehrstuhl_var, values=create_entriesLst(database), font=("Helvetica", 12))
-database_entries_dropdown.set(" Lehrstuhl auswählen ")
+entrieset_var = tk.StringVar()
+database_entries_dropdown = ttk.Combobox(main_window, textvariable=entrieset_var, values=create_entriesLst(database), font=("Helvetica", 12))
+database_entries_dropdown.set("Key auswählen")
+get_databaseEntrie_button = ttk.Button(main_window, text="PDF erstellen")
 
 main_window.columnconfigure(0,weight=1)
 main_window.columnconfigure(1,weight=1)
@@ -348,6 +369,7 @@ browse_txt.configure(command=getKeyTxtFile)
 print_key_windowButton.bind("<Button-1>", lambda event: printKey_window())
 create_key_windowButton.bind("<Button-1>", lambda event: createKey_window())
 create_key_button.bind("<Button-1>", lambda event: create_keyEntry())
+get_databaseEntrie_button.bind("<Button-1>", lambda event: get_databaseEntry())
 
 checkFor_geraetInput_change.last_value = geraet_input.get() # Initialisierung der letzten Eingabe des Geräte-inputs
 checkFor_personInput_change.last_value = person_input.get() # Initialisierung der letzten Eingabe des Person-inputs
