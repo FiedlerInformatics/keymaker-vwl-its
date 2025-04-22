@@ -1,5 +1,6 @@
 from fpdf import FPDF
 from keepassObject import Key
+from pathlib import Path
 
 mock_key = Key(
     password="testpass",
@@ -15,6 +16,11 @@ mock_key = Key(
     id="ID-001",
     key="123456-654321-123456-654321-123456-654321-123456-654321"
 )
+
+def name_pdf(keyObject:Key) -> str:
+    newFilename = "Bitlocker" + "_" + keyObject.date + "_" + keyObject.lehrstuhl + "_" + keyObject.user + "_SN-" + keyObject.serienNummer + "hiwi-" + keyObject.hiwi + ".pdf"
+    newFilename = newFilename.replace("/"," ").replace("\\","").replace(":"," ").replace("?","").replace("*","").replace("<","").replace(">","")
+    return newFilename
 
 class PDF(FPDF):
     def header(self):
@@ -66,9 +72,10 @@ class PDF(FPDF):
                         border=0,
                         align="C")
        
-def txt_to_pdf(txt_path):
+def txt_to_pdf(keyObject:Key):
+    download_dir = Path.home() / "Downloads" / name_pdf(keyObject)
     pdf = PDF()
     pdf.add_page()
-    pdf.main('bitlocker.txt')
-    pdf.device_info(mock_key)
-    pdf.output("header.pdf")
+    pdf.main(keyObject.txt_path)
+    pdf.device_info(keyObject)
+    pdf.output(download_dir)

@@ -57,7 +57,6 @@ main_window.geometry("900x700")
 main_window.minsize(900,700)
 main_window.title("Keymaker")
 
-create_pdf = tk.BooleanVar(master=main_window,value=True)
 database = PyKeePass(keyObject.database_path, keyObject.password)
 
 def remove_createKey_window() -> None:
@@ -219,8 +218,6 @@ def rename_txt() -> str:
     newFilename = newFilename.replace("/"," ").replace("\\","").replace(":"," ").replace("?","").replace("*","").replace("<","").replace(">","")
     return newFilename
 
-    
-
 def create_keyEntry() -> None:
     mainWindow_error.config(text="") # Löschen der vorherigen Fehlermeldung
     person_input.config(fg="black")
@@ -264,7 +261,10 @@ def create_keyEntry() -> None:
 
     set_opacity(mainWindow_success, 1)
     mainWindow_success.config(text="Eintrag erfolgreich erstellt")
-    createDatasheetPDF.txt_to_pdf(keyObject)
+
+    if create_pdf_checkButton_bool.get() == 1:
+        createDatasheetPDF.txt_to_pdf(keyObject)
+
     kp.save()
 
 ######################################################################################
@@ -310,11 +310,13 @@ bitlocker_key_input = ttk.Entry(main_window, font=("Helvetica 12"))
 bitlocker_bezeichner_label = ttk.Label(main_window, text="Bitlocker Bezeichner", font="Helvetica 12")
 bitlocker_bezeichner_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
-create_pdf_checkButton = tk.Checkbutton(main_window, text="PDF erstellen",variable=create_pdf, font="Helvetica 12")
+create_pdf_checkButton_bool = IntVar()
+create_pdf_checkButton = tk.Checkbutton(main_window, text="PDF erstellen", font="Helvetica 12", variable = create_pdf_checkButton_bool)
 
 mainWindow_error = tk.Label(main_window, text="", font="Helvetica 12", fg="red", width=35, anchor="center",justify= 'center')
 mainWindow_success = tk.Label(main_window, text="", font="Helvetica 12", fg="green", width=35, anchor="center",justify= 'center')
 
+#create_key_button_boolean = IntVar()
 create_key_button = ttk.Button(main_window, text="Key erstellen")
 ###########################################################################
 entrieset_var = tk.StringVar()
