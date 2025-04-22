@@ -15,10 +15,8 @@ import pickle
 import pyAesCrypt
 import configparser
 
-
 INIpath = 'databasePath.ini' # Pfad zur INI-Datei
 corruptDatabasePath = False
-
 #############################
 # ERSTELLEN DES KEY OBJECTS #
 #############################
@@ -150,9 +148,6 @@ login_button.place(x=430,y=357)
 ##############
 # FUNKTIONEN #
 ##############
-
-
-
 def serialisation(kpo: Key) -> None:
     with open("keyObj.pickle", "wb") as f:
         pickle.dump(kpo, f)

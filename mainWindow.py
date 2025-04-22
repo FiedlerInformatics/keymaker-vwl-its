@@ -1,5 +1,6 @@
 import pykeepass.exceptions
 from keepassObject import Key
+#import createDatasheetPDF
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk, filedialog
@@ -20,6 +21,7 @@ from io import StringIO
 from datetime import date
 from ctypes import windll
 from configparser import ConfigParser
+import createDatasheetPDF
 
 keyObject = None
 
@@ -71,6 +73,7 @@ def printKey_window() -> None:
 
 def createKey_window() -> None:
     database_entries_dropdown.grid_remove()
+    set_opacity(get_databaseEntrie_button,0)
     create_key_windowButton.config(font="Helvetica 12 bold")
     print_key_windowButton.config(font="Helvetica 12")
     database_entries_dropdown.set("Key auswählen")
@@ -92,6 +95,7 @@ def get_databaseEntry() -> None:
             keyObject.hiwi = entry.get_custom_property("Hilfskraft")
             keyObject.id = entry.get_custom_property("Bezeichner")
             keyObject.key = entry.get_custom_property("Wiederherstellungsschluessel")
+
         except pykeepass.exceptions.KeePassFileError as e:
             print(f"Error: {e}")
           
@@ -120,12 +124,14 @@ def getKeyTxtFile() -> None:
             keyObject.id, keyObject.key = extract_ID_KEY(remove_CRLF(keyObject.txt_path))
             # Einfügen des Pfades, id und des Keys in die Textfelder
             txt_entry.insert(0,keyObject.txt_path)
+            txt_entry.config(fg="black")
             bitlocker_bezeichner_input.insert(0,keyObject.id)
             bitlocker_key_input.insert(0,keyObject.key)
         except TypeError as e:
             # Ausgeben der Fehlermeldung im Textfeld 
-             txt_entry.insert(0,"kein gültiger Key" + str(e))
-
+            txt_entry.insert(0, "kein gültiger Key" + str(e))
+            txt_entry.config(fg="red")
+ 
 def extract_ID_KEY(file) -> tuple:
         content = file.read()
         identifier_pattern = r"[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}"
@@ -172,7 +178,6 @@ def create_entriesLst(PyKeePass) -> list[str]:
             strLst.append(strVar.replace('(None)', ''))
     for i in range (len(strLst)):
         strLst[i] = re.sub(r"[\(\[].*?[\)\]]", "", strLst[i]).strip()
-    print(strLst)
     return strLst
 
 # Lese die Eingabe aus den Textfeldern und speichere sie in den Attributen des Key-Objekts
@@ -213,6 +218,8 @@ def rename_txt() -> str:
     newFilename = "Bitlocker" + "_" + keyObject.date + "_" + keyObject.lehrstuhl + "_" + keyObject.user + "_SN-" + keyObject.serienNummer + "hiwi-" + keyObject.hiwi + ".txt"
     newFilename = newFilename.replace("/"," ").replace("\\","").replace(":"," ").replace("?","").replace("*","").replace("<","").replace(">","")
     return newFilename
+
+    
 
 def create_keyEntry() -> None:
     mainWindow_error.config(text="") # Löschen der vorherigen Fehlermeldung
@@ -257,9 +264,7 @@ def create_keyEntry() -> None:
 
     set_opacity(mainWindow_success, 1)
     mainWindow_success.config(text="Eintrag erfolgreich erstellt")
-    print("Name: " + keyObject.user)
-    print("Gerät: " + keyObject.geraet)
-    print("Entry.title: " + entry.title)	
+    createDatasheetPDF.txt_to_pdf(keyObject)
     kp.save()
 
 ######################################################################################
@@ -267,13 +272,13 @@ style = ttk.Style(main_window)
 style.theme_use("vista")
 main_window.iconbitmap(default="keymaker_images/lockSymbol.ico")
 
-create_key_windowButton = ttk.Label(main_window,text="Key erstellen",font="Helvetica 12 bold")
-print_key_windowButton = ttk.Label(main_window,text="Key drucken", font="Helvetica 12")
+create_key_windowButton = ttk.Label(main_window,text="Key erstellen",font="Helvetica 12 bold", cursor="hand2")
+print_key_windowButton = ttk.Label(main_window,text="Key drucken", font="Helvetica 12", cursor="hand2")
 
 trennlinie = tk.Frame(main_window,bg='grey',width=1)
 
 browse_txt = ttk.Button(main_window, text=".txt-Datei")
-txt_entry = ttk.Entry(main_window, font=("Helvetica 12"))
+txt_entry = tk.Entry(main_window, font=("Helvetica 12"))
 
 person_label = ttk.Label(main_window,text="Person", font="Helvetica 12")
 person_input = tk.Entry(main_window, font=("Helvetica 12"))
@@ -316,11 +321,9 @@ entrieset_var = tk.StringVar()
 database_entries_dropdown = ttk.Combobox(main_window, textvariable=entrieset_var, values=create_entriesLst(database), font=("Helvetica", 12))
 database_entries_dropdown.set("Key auswählen")
 get_databaseEntrie_button = ttk.Button(main_window, text="PDF erstellen")
-
-main_window.columnconfigure(0,weight=1)
-main_window.columnconfigure(1,weight=1)
-main_window.columnconfigure(2,weight=1)
-main_window.columnconfigure(4,weight=1)
+######################################################################################
+for col in [0, 1, 2, 4]:
+    main_window.columnconfigure(col, weight=1)
 for col in (1, 3):
     main_window.columnconfigure(col, weight=3)
 for row in range(17):
@@ -377,5 +380,3 @@ checkFor_geraetInput_change() # Aufruf der Funktion zur Überprüfung der Eingab
 checkFor_personInput_change() # Aufruf der Funktion zur Überprüfung der Eingabe im Person-input
 
 main_window.mainloop()
-
-    
