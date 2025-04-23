@@ -22,6 +22,7 @@ from datetime import date
 from ctypes import windll
 from configparser import ConfigParser
 import createDatasheetPDF
+from pathlib import Path
 
 keyObject = None
 
@@ -65,26 +66,38 @@ def remove_createKey_window() -> None:
 
 def printKey_window() -> None:
     database_entries_dropdown.grid(row=1, column=1, sticky='we',padx=(20, 0))
-    get_databaseEntrie_button.grid(row=2, column=1, sticky='sw',padx=(20,0))
+    print_key_button.grid(row=2, column=1, sticky='sw',padx=(20,0))
     create_key_windowButton.config(font="Helvetica 12")
     print_key_windowButton.config(font="Helvetica 12 bold")
     remove_createKey_window()
 
 def createKey_window() -> None:
     database_entries_dropdown.grid_remove()
-    set_opacity(get_databaseEntrie_button,0)
+    set_opacity(print_key_button,0)
     create_key_windowButton.config(font="Helvetica 12 bold")
     print_key_windowButton.config(font="Helvetica 12")
     database_entries_dropdown.set("Key auswählen")
     for widget in createKey_windowsLayout.keys():
         set_opacity(widget, 1)
 
-def get_databaseEntry() -> None:
+
+def get_txtpath_from_database(entry) -> str:
+    for att in entry.attachments:
+        try:
+            if att.filename.endswith('.txt'):
+                with open(att.filename, 'wb') as f:
+                    f.write(att.data)
+                    return att.filename
+        except AttributeError as e:
+            print("Unable to read txt-file from Keepass Database " + e)
+            
+def print_key() -> None:
     entryString = database_entries_dropdown.get()
     if entryString != "Key auswählen":
-        try:
+        
             entryString = os.path.basename(entryString)
             entry = database.find_entries(title=entryString, first=True)
+            keyObject.txt_path = get_txtpath_from_database(entry)
             keyObject.user = entry.get_custom_property("Name")
             keyObject.device = entry.get_custom_property("Gerät")
             keyObject.lehrstuhl = entry.get_custom_property("Lehrstuhl")
@@ -95,9 +108,21 @@ def get_databaseEntry() -> None:
             keyObject.id = entry.get_custom_property("Bezeichner")
             keyObject.key = entry.get_custom_property("Wiederherstellungsschluessel")
 
-        except pykeepass.exceptions.KeePassFileError as e:
-            print(f"Error: {e}")
-          
+            # Print all attributes in the terminal
+            print(f"txt_path: {keyObject.txt_path}")
+            print(f"user: {keyObject.user}")
+            print(f"device: {keyObject.device}")
+            print(f"lehrstuhl: {keyObject.lehrstuhl}")
+            print(f"serienNummer: {keyObject.serienNummer}")
+            print(f"date: {keyObject.date}")
+            print(f"ivs: {keyObject.ivs}")
+            print(f"hiwi: {keyObject.hiwi}")
+            print(f"id: {keyObject.id}")
+            print(f"key: {keyObject.key}")
+
+            createDatasheetPDF.txt_to_pdf(keyObject)
+        
+
 
 # Entferne alle Eingaben aus den Inputfeldern des main windows
 def clear_mainWindow_inputFields() -> None:
@@ -310,8 +335,8 @@ bitlocker_key_input = ttk.Entry(main_window, font=("Helvetica 12"))
 bitlocker_bezeichner_label = ttk.Label(main_window, text="Bitlocker Bezeichner", font="Helvetica 12")
 bitlocker_bezeichner_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
-create_pdf_checkButton_bool = IntVar()
-create_pdf_checkButton = tk.Checkbutton(main_window, text="PDF erstellen", font="Helvetica 12", variable = create_pdf_checkButton_bool)
+create_pdf_checkButton_bool = IntVar(value=1)  # Set default state to checked
+create_pdf_checkButton = tk.Checkbutton(main_window, text="PDF erstellen", font="Helvetica 12", variable=create_pdf_checkButton_bool)
 
 mainWindow_error = tk.Label(main_window, text="", font="Helvetica 12", fg="red", width=35, anchor="center",justify= 'center')
 mainWindow_success = tk.Label(main_window, text="", font="Helvetica 12", fg="green", width=35, anchor="center",justify= 'center')
@@ -322,7 +347,7 @@ create_key_button = ttk.Button(main_window, text="Key erstellen")
 entrieset_var = tk.StringVar()
 database_entries_dropdown = ttk.Combobox(main_window, textvariable=entrieset_var, values=create_entriesLst(database), font=("Helvetica", 12))
 database_entries_dropdown.set("Key auswählen")
-get_databaseEntrie_button = ttk.Button(main_window, text="PDF erstellen")
+print_key_button = ttk.Button(main_window, text="PDF erstellen")
 ######################################################################################
 for col in [0, 1, 2, 4]:
     main_window.columnconfigure(col, weight=1)
@@ -374,7 +399,7 @@ browse_txt.configure(command=getKeyTxtFile)
 print_key_windowButton.bind("<Button-1>", lambda event: printKey_window())
 create_key_windowButton.bind("<Button-1>", lambda event: createKey_window())
 create_key_button.bind("<Button-1>", lambda event: create_keyEntry())
-get_databaseEntrie_button.bind("<Button-1>", lambda event: get_databaseEntry())
+print_key_button.bind("<Button-1>", lambda event: print_key())
 
 checkFor_geraetInput_change.last_value = geraet_input.get() # Initialisierung der letzten Eingabe des Geräte-inputs
 checkFor_personInput_change.last_value = person_input.get() # Initialisierung der letzten Eingabe des Person-inputs

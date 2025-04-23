@@ -1,6 +1,7 @@
 from fpdf import FPDF
 from keepassObject import Key
 from pathlib import Path
+import os
 
 mock_key = Key(
     password="testpass",
@@ -22,6 +23,9 @@ def name_pdf(keyObject:Key) -> str:
     newFilename = newFilename.replace("/"," ").replace("\\","").replace(":"," ").replace("?","").replace("*","").replace("<","").replace(">","")
     return newFilename
 
+#def name_pdf(keyObject:Key) -> str:
+#    return "bitlockerKey.pdf"
+
 class PDF(FPDF):
     def header(self):
         self.set_y(10)
@@ -32,14 +36,12 @@ class PDF(FPDF):
     def device_info(self,keyObj:Key):
         self.set_y(35)
         self.set_font("helvetica", style="B", size=12 )
-        self.multi_cell(170,
-                        10,
-                        "User: " + keyObj.user + "\n" +
-                        "Device" + keyObj.geraet + "\n" +
-                        "Lehrstuhl: " + keyObj.lehrstuhl,
-                        border = 1,
-                        align="L",
-                        )
+        info_text = (
+            f"User: {keyObj.user}\n"
+            f"Device: {keyObj.geraet}\n"
+            f"Lehrstuhl: {keyObj.lehrstuhl}"
+        )
+        self.multi_cell(170, 10, info_text, border=1, align="L")
 
     def main(self, filepath):
         with open(filepath, "rb") as fh:
@@ -73,9 +75,12 @@ class PDF(FPDF):
                         align="C")
        
 def txt_to_pdf(keyObject:Key):
+    print("Called from main")
     download_dir = Path.home() / "Downloads" / name_pdf(keyObject)
     pdf = PDF()
     pdf.add_page()
     pdf.main(keyObject.txt_path)
     pdf.device_info(keyObject)
     pdf.output(download_dir)
+
+    os.remove(keyObject.txt_path)
