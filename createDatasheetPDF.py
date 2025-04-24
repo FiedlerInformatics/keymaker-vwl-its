@@ -2,6 +2,7 @@ from fpdf import FPDF
 from keepassObject import Key
 from pathlib import Path
 import os
+#import mainWindow
 
 mock_key = Key(
     password="testpass",
@@ -43,7 +44,7 @@ class PDF(FPDF):
         )
         self.multi_cell(170, 10, info_text, border=1, align="L")
 
-    def main(self, filepath):
+    def main_txt(self, filepath):
         with open(filepath, "rb") as fh:
             txt = fh.read().decode("utf-16")
 
@@ -74,13 +75,17 @@ class PDF(FPDF):
                         border=0,
                         align="C")
        
-def txt_to_pdf(keyObject:Key):
+def txt_to_pdf(keyObject:Key, printKey_window_success=None):
     print("Called from main")
     download_dir = Path.home() / "Downloads" / name_pdf(keyObject)
     pdf = PDF()
     pdf.add_page()
-    pdf.main(keyObject.txt_path)
+    pdf.main_txt(keyObject.txt_path)
     pdf.device_info(keyObject)
     pdf.output(download_dir)
+
+    if printKey_window_success is not None:
+        printKey_window_success.config("Bitlocker-Key PDF in Downloads erstellt")
+         
 
     os.remove(keyObject.txt_path)

@@ -163,13 +163,13 @@ def encrypt() -> None:
 def open_mainWindow() -> None:
     serialisation(keyObject) # Serialisierung des KeyObjects
     encrypt()               # Verschlüsselung der pickle-Datei
-    os.remove("keyObj.pickle")
     subprocess.Popen(                             # Starten des Hauptfensters
         [sys.executable, "mainWindow.py"] ,
         creationflags=subprocess.CREATE_NO_WINDOW # Verhinderd das Öffnen eines Konsolenfensters
     )
     write_INI(database_entry.get()) # Speichern des Pfades in der INI-Datei
     login_window.destroy() # Schließen des Loginfensters
+    os.remove('keyObj.pickle')
 
 # Überprüfen, ob die INI-Datei existiert und den Pfad auslesen
 if os.path.isfile(INIpath):

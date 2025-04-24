@@ -1,6 +1,5 @@
 import pykeepass.exceptions
 from keepassObject import Key
-#import createDatasheetPDF
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk, filedialog
@@ -22,6 +21,7 @@ from datetime import date
 from ctypes import windll
 from configparser import ConfigParser
 import createDatasheetPDF
+from fpdf import FPDF
 from pathlib import Path
 
 keyObject = None
@@ -40,8 +40,8 @@ except FileNotFoundError as e:
 with open("obj_de.pickle", "rb") as f:
     keyObject = pickle.load(f)
     f.close()
-#os.remove("obj_de.pickle") # Löschen der unverschlüsselten pickle-Datei
-#os.remove("keyObjPickle.aes") # Löschen der verschlüsselten pickle-Datei
+    os.remove("obj_de.pickle") # Löschen der unverschlüsselten pickle-Datei
+    os.remove("keyObjPickle.aes") # Löschen der verschlüsselten pickle-Datei
 ############################################
 
 # https://stackoverflow.com/questions/77840560/why-opacity-in-tkinter-widgets-not-supported
@@ -67,6 +67,7 @@ def remove_createKey_window() -> None:
 def printKey_window() -> None:
     database_entries_dropdown.grid(row=1, column=1, sticky='we',padx=(20, 0))
     print_key_button.grid(row=2, column=1, sticky='sw',padx=(20,0))
+    set_opacity(print_key_button,1)
     create_key_windowButton.config(font="Helvetica 12")
     print_key_windowButton.config(font="Helvetica 12 bold")
     remove_createKey_window()
@@ -108,21 +109,7 @@ def print_key() -> None:
             keyObject.id = entry.get_custom_property("Bezeichner")
             keyObject.key = entry.get_custom_property("Wiederherstellungsschluessel")
 
-            # Print all attributes in the terminal
-            print(f"txt_path: {keyObject.txt_path}")
-            print(f"user: {keyObject.user}")
-            print(f"device: {keyObject.device}")
-            print(f"lehrstuhl: {keyObject.lehrstuhl}")
-            print(f"serienNummer: {keyObject.serienNummer}")
-            print(f"date: {keyObject.date}")
-            print(f"ivs: {keyObject.ivs}")
-            print(f"hiwi: {keyObject.hiwi}")
-            print(f"id: {keyObject.id}")
-            print(f"key: {keyObject.key}")
-
             createDatasheetPDF.txt_to_pdf(keyObject)
-        
-
 
 # Entferne alle Eingaben aus den Inputfeldern des main windows
 def clear_mainWindow_inputFields() -> None:
@@ -205,7 +192,6 @@ def create_entriesLst(PyKeePass) -> list[str]:
     return strLst
 
 # Lese die Eingabe aus den Textfeldern und speichere sie in den Attributen des Key-Objekts
-
 def get_fieldInputs() -> None:
     keyObject.txt_path = txt_entry.get()
     keyObject.user = person_input.get()
@@ -242,7 +228,74 @@ def rename_txt() -> str:
     newFilename = "Bitlocker" + "_" + keyObject.date + "_" + keyObject.lehrstuhl + "_" + keyObject.user + "_SN-" + keyObject.serienNummer + "hiwi-" + keyObject.hiwi + ".txt"
     newFilename = newFilename.replace("/"," ").replace("\\","").replace(":"," ").replace("?","").replace("*","").replace("<","").replace(">","")
     return newFilename
+#############################################################
+#############        PDF ERZEUGUNG         ##################
+#############################################################
+def name_pdf(keyObject:Key) -> str:
+    newFilename = "Bitlocker" + "_" + keyObject.date + "_" + keyObject.lehrstuhl + "_" + keyObject.user + "_SN-" + keyObject.serienNummer + "hiwi-" + keyObject.hiwi + ".pdf"
+    newFilename = newFilename.replace("/"," ").replace("\\","").replace(":"," ").replace("?","").replace("*","").replace("<","").replace(">","")
+    return newFilename
 
+class PDF(FPDF):
+    def header(self):
+        self.set_y(10)
+        self.set_font("helvetica", style="B" , size=17)
+        self.cell(10)
+        self.cell(170,20, "BitLocker Key", border=0, align="C")
+
+    def device_info(self,keyObj:Key):
+        self.set_y(35)
+        self.set_font("helvetica", style="B", size=12 )
+        info_text = (
+            f"User: {keyObj.user}\n"
+            f"Device: {keyObj.geraet}\n"
+            f"Lehrstuhl: {keyObj.lehrstuhl}"
+        )
+        self.multi_cell(170, 10, info_text, border=1, align="L")
+
+    def main_txt(self, filepath):
+        with open(filepath, "rb") as fh:
+            txt = fh.read().decode("utf-16")
+
+        self.set_auto_page_break(auto=False)  # Verhindert neue Seiten
+        self.set_font("helvetica", size=12)
+
+        # Höhe des Textblocks grob abschätzen
+        num_lines = txt.count("\n") + 1
+        line_height = 8  # etwas höher für bessere Lesbarkeit
+        total_height = num_lines * line_height
+
+        # Seite ist 297mm hoch (A4), rechne Y-Start aus
+        y_start = (297 - total_height) / 2
+        self.set_y(y_start)
+
+        self.multi_cell(0, line_height, txt, align="L")
+
+    def footer(self):
+        self.set_y(-35)
+        self.set_font("helvetica", size=12)
+        self.set_text_color(255, 0, 0)  # Set font color to red
+        self.cell(10)
+        self.multi_cell(170,
+                        12,
+                        "Bewahren Sie das Gerät und den dazugehörigen Bitlocker-Key gertrennt auf."
+                        + "\n" +
+                        "Store this device and its respective Bitlocker-key seperately.",
+                        border=0,
+                        align="C")
+       
+def txt_to_pdf(keyObject:Key):
+    download_dir = Path.home() / "Downloads" / name_pdf(keyObject)
+    pdf = PDF()
+    pdf.add_page()
+    pdf.main_txt(keyObject.txt_path)
+    pdf.device_info(keyObject)
+    pdf.output(download_dir)
+    #printKey_window_success.grid(row=16, column=1, sticky='new', columnspan=5, padx=(0, 0))
+    #printKey_window_success.config(text="Bitlocker-Key PDF in Downloads erstellt")
+    mainWindow_error.config(text="TEST")
+
+#############################################################
 def create_keyEntry() -> None:
     mainWindow_error.config(text="") # Löschen der vorherigen Fehlermeldung
     person_input.config(fg="black")
@@ -288,51 +341,63 @@ def create_keyEntry() -> None:
     mainWindow_success.config(text="Eintrag erfolgreich erstellt")
 
     if create_pdf_checkButton_bool.get() == 1:
-        createDatasheetPDF.txt_to_pdf(keyObject)
+        txt_to_pdf(keyObject)
 
     kp.save()
 
+createKey_symbol = ImageTk.PhotoImage(Image.open(rb'keymaker_images/createkeySymbol.png'))
+printKey_symbol = ImageTk.PhotoImage(Image.open(rb'keymaker_images/printKeySymbol.png'))
+
+key_symbol = ImageTk.PhotoImage(Image.open(rb'keymaker_images/keySymbol.png'))
+calendar_symbol = ImageTk.PhotoImage(Image.open(rb'keymaker_images/calendarSymbol.png'))
+person_symbol = ImageTk.PhotoImage(Image.open(rb'keymaker_images/userSymbol.png'))
+lehrstuhl_symbol= ImageTk.PhotoImage(Image.open(rb'keymaker_images/lehrstuhlSymbol.png'))
+id_symbol= ImageTk.PhotoImage(Image.open(rb'keymaker_images/idSymbol.png'))
+geraet_symbol= ImageTk.PhotoImage(Image.open(rb'keymaker_images/geraetSymbol.png'))
+hiwi_symbol= ImageTk.PhotoImage(Image.open(rb'keymaker_images/hiwiSymbol.png'))
+seriennummer_symbol= ImageTk.PhotoImage(Image.open(rb'keymaker_images/seriennummerSymbol.png'))
+inventarnummer_symbol= ImageTk.PhotoImage(Image.open(rb'keymaker_images/ivnSymbol.png'))
 ######################################################################################
 style = ttk.Style(main_window)
 style.theme_use("vista")
 main_window.iconbitmap(default="keymaker_images/lockSymbol.ico")
 
-create_key_windowButton = ttk.Label(main_window,text="Key erstellen",font="Helvetica 12 bold", cursor="hand2")
-print_key_windowButton = ttk.Label(main_window,text="Key drucken", font="Helvetica 12", cursor="hand2")
+create_key_windowButton = ttk.Label(main_window,text="Key erstellen",image=createKey_symbol,compound='left', font="Helvetica 12 bold", cursor="hand2")
+print_key_windowButton = ttk.Label(main_window,text="Key drucken", image=printKey_symbol, compound='left', font="Helvetica 12", cursor="hand2")
 
 trennlinie = tk.Frame(main_window,bg='grey',width=1)
 
 browse_txt = ttk.Button(main_window, text=".txt-Datei")
 txt_entry = tk.Entry(main_window, font=("Helvetica 12"))
 
-person_label = ttk.Label(main_window,text="Person", font="Helvetica 12")
+person_label = ttk.Label(main_window,text="Person",image=person_symbol,compound='left',font="Helvetica 12")
 person_input = tk.Entry(main_window, font=("Helvetica 12"))
 
-geraet_label = ttk.Label(main_window,text="Gerät", font="Helvetica 12")
+geraet_label = ttk.Label(main_window,text="Gerät", image=geraet_symbol, compound='left', font="Helvetica 12")
 geraet_input = tk.Entry(main_window,font=("Helvetica 12"))
 
-lehrstuhl_label = ttk.Label(main_window, text="Lehrstuhl", font="Helvetica 12")
+lehrstuhl_label = ttk.Label(main_window, text="Lehrstuhl",image=lehrstuhl_symbol,compound='left',font="Helvetica 12")
 lehrstuhl_var = tk.StringVar()
-lehrstuhl_input = ttk.Combobox(main_window, textvariable=lehrstuhl_var, values=create_lehrstuhlLst(database), font=("Helvetica", 12))
+lehrstuhl_input = ttk.Combobox(main_window, textvariable=lehrstuhl_var,values=create_lehrstuhlLst(database), font=("Helvetica", 12))
 lehrstuhl_input.set("Lehrstuhl auswählen") # Setzen des Standardwerts auf "Lehrstuhl auswählen"
 
-seriennummer_label = ttk.Label(main_window, text="Seriennummer", font="Helvetica 12")
+seriennummer_label = ttk.Label(main_window, text="Seriennummer",image=seriennummer_symbol, compound='left',font="Helvetica 12")
 seriennummer_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
-datum_label = ttk.Label(main_window, text="Datum", font="Helvetica 12")
+datum_label = ttk.Label(main_window, text="Datum",image=calendar_symbol, compound='left', font="Helvetica 12")
 datum_input = ttk.Entry(main_window, font=("Helvetica 12"))
 datum_input.insert(0,date.today().strftime("%d.%m.%Y")) # Setzen des Datums auf das heutige Datum
 
-inventarnummer_label = ttk.Label(main_window, text="Inventarnummer", font="Helvetica 12 ")
+inventarnummer_label = ttk.Label(main_window, text="Inventarnummer",image=inventarnummer_symbol, compound='left',  font="Helvetica 12 ")
 inventarnummer_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
-hilfskraft_label = ttk.Label(main_window, text="Hilfskraft", font="Helvetica 12")
+hilfskraft_label = ttk.Label(main_window, text="Hilfskraft", image=hiwi_symbol, compound='left', font="Helvetica 12")
 hilfskraft_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
-bitlocker_key_label = ttk.Label(main_window, text="Bitlocker Key", font="Helvetica 12")
+bitlocker_key_label = ttk.Label(main_window, text="Bitlocker Key",image=key_symbol, compound='left', font="Helvetica 12")
 bitlocker_key_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
-bitlocker_bezeichner_label = ttk.Label(main_window, text="Bitlocker Bezeichner", font="Helvetica 12")
+bitlocker_bezeichner_label = ttk.Label(main_window, text="Bitlocker Bezeichner",image=id_symbol, compound='left', font="Helvetica 12")
 bitlocker_bezeichner_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
 create_pdf_checkButton_bool = IntVar(value=1)  # Set default state to checked
@@ -348,6 +413,7 @@ entrieset_var = tk.StringVar()
 database_entries_dropdown = ttk.Combobox(main_window, textvariable=entrieset_var, values=create_entriesLst(database), font=("Helvetica", 12))
 database_entries_dropdown.set("Key auswählen")
 print_key_button = ttk.Button(main_window, text="PDF erstellen")
+printKey_window_success = tk.Label(main_window, text="", font="Helvetica 12", fg="green", width=35, anchor="center",justify= 'center')
 ######################################################################################
 for col in [0, 1, 2, 4]:
     main_window.columnconfigure(col, weight=1)
@@ -362,6 +428,7 @@ create_key_windowButton.grid(column=0,row=1,sticky='w',padx=(10,5))
 print_key_windowButton.grid(column=0,row=2,sticky='w',padx=(10,5))
 
 trennlinie.grid(row=0,column=0,sticky="nes",rowspan=21,padx=10)
+
 
 createKey_windowsLayout = {
     browse_txt: {"row": 1, "column": 1, "sticky": 'wn', "padx": (20, 0)},
@@ -389,6 +456,7 @@ createKey_windowsLayout = {
     mainWindow_success: {"row": 16, "column": 1, "sticky": 'new', 'columnspan': 5, "padx": (0,0)},
     create_key_button: {"row": 15, "column": 3, "sticky": 'en', "padx": (0, 20)},
 }
+
 
 for widget, layout in createKey_windowsLayout.items():
     widget.grid(**layout)
