@@ -1,5 +1,7 @@
 # VWL Keymaker
 
 ### Screenshots
-#### Login Window
+#### Login window
 ![keymaker login window](https://github.com/FiedlerInformatics/keymaker-vwl-its/blob/main/keymaker_images/Screenshot_loginWindow.jpg)
+#### Main window
+![keymaker login window](https://github.com/FiedlerInformatics/keymaker-vwl-its/blob/main/keymaker_images/Screenshot_mainWindow.jpg)
