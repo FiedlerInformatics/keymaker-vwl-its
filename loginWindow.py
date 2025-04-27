@@ -1,3 +1,4 @@
+import mainWindow
 import pykeepass.exceptions
 from keepassObject import Key
 from tkinter import *
@@ -17,13 +18,10 @@ import configparser
 
 INIpath = 'databasePath.ini' # Pfad zur INI-Datei
 corruptDatabasePath = False
-#############################
-# ERSTELLEN DES KEY OBJECTS #
-#############################
 keyObject = Key()
 for attr in keyObject.__dict__:
     setattr(keyObject, attr, None)
-############################
+
 login_window = tk.Tk()
 login_window.geometry("700x433")
 login_window.resizable(False,False)
@@ -161,16 +159,9 @@ def encrypt() -> None:
         print(f"Encryption Error: {e}")
 
 def open_mainWindow() -> None:
-    serialisation(keyObject) # Serialisierung des KeyObjects
-    encrypt()               # Verschlüsselung der pickle-Datei
-    subprocess.Popen(                             # Starten des Hauptfensters
-        [sys.executable, "mainWindow.py"] ,
-        creationflags=subprocess.CREATE_NO_WINDOW # Verhinderd das Öffnen eines Konsolenfensters
-    )
-    write_INI(database_entry.get()) # Speichern des Pfades in der INI-Datei
-    login_window.destroy() # Schließen des Loginfensters
-    os.remove('keyObj.pickle')
-
+    login_window.destroy()
+    mainWindow.openMainWindow(keyObject)
+    
 # Überprüfen, ob die INI-Datei existiert und den Pfad auslesen
 if os.path.isfile(INIpath):
     # Überprüfen, ob der Pfad in der INI-Datei gültig ist
