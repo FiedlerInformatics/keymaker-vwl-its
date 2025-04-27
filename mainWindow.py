@@ -23,6 +23,8 @@ from configparser import ConfigParser
 import createDatasheetPDF
 from fpdf import FPDF
 from pathlib import Path
+import barcode
+from barcode.writer import ImageWriter
 
 keyObject = None
 
@@ -236,64 +238,103 @@ def name_pdf(keyObject:Key) -> str:
     newFilename = newFilename.replace("/"," ").replace("\\","").replace(":"," ").replace("?","").replace("*","").replace("<","").replace(">","")
     return newFilename
 
+
+
+
 class PDF(FPDF):
+    
+    def create_id_barcode(keyobject:Key) -> str:
+        EAN = barcode.get_barcode_class('code39')
+        idIO = EAN(keyobject.id, writer=ImageWriter(),add_checksum = False)
+        idIO.save("id_barcode")
+        return("id_barcode.png")
+
+    def create_key_barcode(keyobject:Key) -> str:
+        EAN = barcode.get_barcode_class('code39')
+        idIO = EAN(keyobject.key, writer=ImageWriter(),add_checksum = False)
+        idIO.save("key_barcode")
+        return("key_barcode.png")
+
     def header(self):
         self.set_y(10)
         self.set_font("helvetica", style="B" , size=17)
         self.cell(10)
         self.cell(170,20, "BitLocker Key", border=0, align="C")
 
-    def device_info(self,keyObj:Key):
+    def device_info(self,keyObject):
         self.set_y(35)
+        self.set_x(20)
         self.set_font("helvetica", style="B", size=12 )
         info_text = (
-            f"User: {keyObj.user}\n"
-            f"Device: {keyObj.geraet}\n"
-            f"Lehrstuhl: {keyObj.lehrstuhl}"
+            f"User: {keyObject.user}\n"
+            f"Device: {keyObject.geraet}\n"
+            f"Lehrstuhl: {keyObject.lehrstuhl}"
         )
-        self.multi_cell(170, 10, info_text, border=1, align="L")
+        self.multi_cell(170, 9, info_text, border=1, align="L")
 
-    def main_txt(self, filepath):
-        with open(filepath, "rb") as fh:
-            txt = fh.read().decode("utf-16")
-
-        self.set_auto_page_break(auto=False)  # Verhindert neue Seiten
+    def bezeichner_txt(self):
+        self.set_y(80)
         self.set_font("helvetica", size=12)
+        self.cell(10)
+        self.multi_cell(170,
+                        8, #Spaltenabstand
+                        "Wiederherstellungsschlüssel für die BitLocker-Laufwerkverschlüsselung"
+                        + "\n" +
+                        "Um zu überprüfen, ob es sich um den richtigen Wiederherstellungsschlüssel handelt,"
+                        + "\n" +
+                        "vergleichen Sie den Beginn des folgenden Bezeichners mit dem auf dem PC angezeigten Bezeichnerwert."
+                        + "\n" + "\n" +
+                        "Bezeichner:"
+                        ,
+                        border=0,
+                        align="L")        
 
-        # Höhe des Textblocks grob abschätzen
-        num_lines = txt.count("\n") + 1
-        line_height = 8  # etwas höher für bessere Lesbarkeit
-        total_height = num_lines * line_height
+    def bezeichner_barcode(self,keyObject:Key) -> None:
+        self.image(PDF.create_id_barcode(keyObject),30,135,150)
 
-        # Seite ist 297mm hoch (A4), rechne Y-Start aus
-        y_start = (297 - total_height) / 2
-        self.set_y(y_start)
-
-        self.multi_cell(0, line_height, txt, align="L")
+    def key_txt(self) -> None:
+        self.set_y(170)
+        self.set_font("helvetica", size=12)
+        self.cell(10)
+        self.multi_cell(170,
+                        8, #Spaltenabstand
+                        "Falls der obige Bezeichner mit dem auf dem PC angezeigten Bezeichner übereinstimmt," 
+                        + "\n" +
+                        "sollten Sie den folgenden Schlüssel zum Entsperren des Laufwerks verwenden."
+                        + "\n" + "\n" +
+                        "Wiederherstellungsschlüssel:"
+                        ,
+                        border=0,
+                        align="L")  
+    
+    def key_barcode(self,keyObject:Key) -> None:
+        self.image(PDF.create_key_barcode(keyObject),30,210,150)
 
     def footer(self):
-        self.set_y(-35)
+        self.set_y(-45)
         self.set_font("helvetica", size=12)
-        self.set_text_color(255, 0, 0)  # Set font color to red
+        self.set_text_color(255, 0, 0)  # Rote Schrift
         self.cell(10)
         self.multi_cell(170,
                         12,
                         "Bewahren Sie das Gerät und den dazugehörigen Bitlocker-Key gertrennt auf."
                         + "\n" +
-                        "Store this device and its respective Bitlocker-key seperately.",
+                        "Store the device and the corresponding Bitlocker key separate.",
                         border=0,
-                        align="C")
+                        align="C") 
        
 def txt_to_pdf(keyObject:Key):
     download_dir = Path.home() / "Downloads" / name_pdf(keyObject)
     pdf = PDF()
     pdf.add_page()
-    pdf.main_txt(keyObject.txt_path)
+    pdf.header()
     pdf.device_info(keyObject)
+    pdf.bezeichner_txt()
+    pdf.bezeichner_barcode(keyObject)
+    pdf.key_txt()
+    pdf.key_barcode(keyObject)
     pdf.output(download_dir)
-    #printKey_window_success.grid(row=16, column=1, sticky='new', columnspan=5, padx=(0, 0))
-    #printKey_window_success.config(text="Bitlocker-Key PDF in Downloads erstellt")
-    mainWindow_error.config(text="TEST")
+    
 
 #############################################################
 def create_keyEntry() -> None:
