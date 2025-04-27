@@ -29,10 +29,11 @@ login_window.title("Keymaker")
 ########################################################
 def getDataBase() -> None:
     global corruptDatabasePath
-    #password_entry.delete(0, tk.END)  # Löschen des Passwortfeldes
-    #database_entry.delete(0, tk.END)  # Löschen des Datenbankpfad-Feldes
+    password_entry.delete(0, tk.END)  # Löschen des Passwortfeldes
+    database_entry.delete(0, tk.END)  # Löschen des Datenbankpfad-Feldes
 
     # Wenn keine INI-Datei vorhanden ist, öffne den Dateiauswahldialog
+
     keyObject.database_path = filedialog.askopenfilename(
         title="Datenbank auswählen",
         filetypes=[("KeePass Database", "*.kdbx")],
@@ -63,8 +64,9 @@ def getDataBase() -> None:
             corruptDatabasePath = True
 
             # --> Neue Auswahl ermöglichen
+            database_entry.delete(0, tk.END)
             new_path = filedialog.askopenfilename(
-                title="Datenbank auswählen",
+                title="Datenbank auswählen DEBUGGING",
                 filetypes=[("KeePass Database", "*.kdbx")],
             )
             if new_path:
@@ -164,11 +166,10 @@ def open_mainWindow() -> None:
     
 # Überprüfen, ob die INI-Datei existiert und den Pfad auslesen
 if os.path.isfile(INIpath):
-    # Überprüfen, ob der Pfad in der INI-Datei gültig ist
-    databasepath = get_database_path()
+    databasepath = get_database_path()          # Überprüfen, ob der Pfad in der INI-Datei gültig ist
     if os.path.isfile(databasepath):
         keyObject.database_path = get_database_path()
-        database_entry.insert(0, databasepath) # Einfügen des Pfades in das Entry-Feld
+        database_entry.insert(0, databasepath)  # Einfügen des Pfades in das Entry-Feld
     else:
         error_message.config(text="Dateipfad inkorrekt", fg="red")
         database_entry.insert(0,databasepath)

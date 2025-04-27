@@ -53,6 +53,8 @@ def openMainWindow(keyObject:Key):
     def printKey_window() -> None:
         database_entries_dropdown.grid(row=1, column=1, sticky='we',padx=(20, 0))
         print_key_button.grid(row=2, column=1, sticky='sw',padx=(20,0))
+        printKey_window_success.grid(row=16, column=1, sticky='new', padx=(0, 0))  # <-- Zeigt pos.Meldung im Keywindow
+        printKey_window_error.grid(row=16, column=1, sticky='new', padx=(0, 0))  # <-- Zeigt pos.Meldung im Keywindow
         set_opacity(print_key_button,1)
         create_key_windowButton.config(font="Helvetica 12")
         print_key_windowButton.config(font="Helvetica 12 bold")
@@ -84,9 +86,9 @@ def openMainWindow(keyObject:Key):
             
                 entryString = os.path.basename(entryString)
                 entry = database.find_entries(title=entryString, first=True)
-                keyObject.txt_path = get_txtpath_from_database(entry)
+                #keyObject.txt_path = get_txtpath_from_database(entry)
                 keyObject.user = entry.get_custom_property("Name")
-                keyObject.device = entry.get_custom_property("Gerät")
+                keyObject.geraet = entry.get_custom_property("Gerät")
                 keyObject.lehrstuhl = entry.get_custom_property("Lehrstuhl")
                 keyObject.serienNummer = entry.get_custom_property("Seriennummer")
                 keyObject.date = entry.get_custom_property("Datum")
@@ -95,7 +97,14 @@ def openMainWindow(keyObject:Key):
                 keyObject.id = entry.get_custom_property("Bezeichner")
                 keyObject.key = entry.get_custom_property("Wiederherstellungsschluessel")
 
-                createDatasheetPDF.txt_to_pdf(keyObject)
+                try:
+                    txt_to_pdf(keyObject)
+                    set_opacity(printKey_window_error,0)
+                    printKey_window_success.config(text="PDF wurde erstellt")
+                except Exception as e:
+                    set_opacity(printKey_window_success,0)
+                    printKey_window_error.config(text=f"Fehler beim Erstellen des PDFs: {e}")
+                    print(f"Error: {e}")
 
     # Entferne alle Eingaben aus den Inputfeldern des main windows
     def clear_mainWindow_inputFields() -> None:
@@ -123,7 +132,9 @@ def openMainWindow(keyObject:Key):
                 txt_entry.insert(0,keyObject.txt_path)
                 txt_entry.config(fg="black")
                 bitlocker_bezeichner_input.insert(0,keyObject.id)
+                bitlocker_bezeichner_input.config(state="disabled")
                 bitlocker_key_input.insert(0,keyObject.key)
+                bitlocker_key_input.config(state="disabled")
             except TypeError as e:
                 # Ausgeben der Fehlermeldung im Textfeld 
                 txt_entry.insert(0, "kein gültiger Key" + str(e))
@@ -222,9 +233,6 @@ def openMainWindow(keyObject:Key):
         newFilename = newFilename.replace("/"," ").replace("\\","").replace(":"," ").replace("?","").replace("*","").replace("<","").replace(">","")
         return newFilename
 
-
-
-
     class PDF(FPDF):
         
         def create_id_barcode(keyobject:Key) -> str:
@@ -243,7 +251,7 @@ def openMainWindow(keyObject:Key):
             self.set_y(10)
             self.set_font("helvetica", style="B" , size=17)
             self.cell(10)
-            self.cell(170,20, "BitLocker Key", border=0, align="C")
+            self.cell(170,20, "Bit Locker Key", border=0, align="C")
 
         def device_info(self,keyObject):
             self.set_y(35)
@@ -318,7 +326,8 @@ def openMainWindow(keyObject:Key):
         pdf.key_txt()
         pdf.key_barcode(keyObject)
         pdf.output(download_dir)
-        
+        os.remove("id_barcode.png")
+        os.remove("key_barcode.png")
 
     #############################################################
     def create_keyEntry() -> None:
@@ -439,6 +448,7 @@ def openMainWindow(keyObject:Key):
     database_entries_dropdown.set("Key auswählen")
     print_key_button = ttk.Button(main_window, text="PDF erstellen")
     printKey_window_success = tk.Label(main_window, text="", font="Helvetica 12", fg="green", width=35, anchor="center",justify= 'center')
+    printKey_window_error = tk.Label(main_window, text="", font="Helvetica 12", fg="red", width=35, anchor="center",justify= 'center')
     ######################################################################################
     for col in [0, 1, 2, 4]:
         main_window.columnconfigure(col, weight=1)
