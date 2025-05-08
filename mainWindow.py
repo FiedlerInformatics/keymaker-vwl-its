@@ -24,7 +24,7 @@ import createDatasheetPDF
 from fpdf import FPDF
 from pathlib import Path
 import barcode
-from barcode.writer import ImageWriter
+from barcode.writer import SVGWriter
 
 keyObject = None
 
@@ -237,15 +237,15 @@ def openMainWindow(keyObject:Key):
         
         def create_id_barcode(keyobject:Key) -> str:
             EAN = barcode.get_barcode_class('code39')
-            idIO = EAN(keyobject.id, writer=ImageWriter(),add_checksum = False)
+            idIO = EAN(keyobject.id, writer=SVGWriter(), add_checksum=True)
             idIO.save("id_barcode")
-            return("id_barcode.png")
+            return "id_barcode.svg"
 
         def create_key_barcode(keyobject:Key) -> str:
             EAN = barcode.get_barcode_class('code39')
-            idIO = EAN(keyobject.key, writer=ImageWriter(),add_checksum = False)
+            idIO = EAN(keyobject.key.replace("-", ""), writer=SVGWriter(),add_checksum = True)
             idIO.save("key_barcode")
-            return("key_barcode.png")
+            return "key_barcode.svg"
 
         def header(self):
             self.set_y(10)
@@ -281,11 +281,14 @@ def openMainWindow(keyObject:Key):
                             border=0,
                             align="L")        
 
-        def bezeichner_barcode(self,keyObject:Key) -> None:
-            self.image(PDF.create_id_barcode(keyObject),30,135,150)
+        def print_bezeichner(self,keyObject:Key) -> None:
+            self.set_y(127)
+            self.set_font("helvetica", style="B" , size=12)
+            self.cell(10)
+            self.cell(170,20, keyObject.id, border=0, align="C")
 
         def key_txt(self) -> None:
-            self.set_y(170)
+            self.set_y(150)
             self.set_font("helvetica", size=12)
             self.cell(10)
             self.multi_cell(170,
@@ -300,7 +303,13 @@ def openMainWindow(keyObject:Key):
                             align="L")  
         
         def key_barcode(self,keyObject:Key) -> None:
-            self.image(PDF.create_key_barcode(keyObject),30,210,150)
+            self.image(PDF.create_key_barcode(keyObject),17.5,200,175)
+
+        def print_key(self,keyObject:Key) -> None:
+            self.set_y(215)
+            self.set_font("helvetica", style="B" , size=12)
+            self.cell(10)
+            self.cell(170,20, keyObject.key, border=0, align="C")
 
         def footer(self):
             self.set_y(-45)
@@ -322,12 +331,12 @@ def openMainWindow(keyObject:Key):
         pdf.header()
         pdf.device_info(keyObject)
         pdf.bezeichner_txt()
-        pdf.bezeichner_barcode(keyObject)
+        pdf.print_bezeichner(keyObject)
         pdf.key_txt()
         pdf.key_barcode(keyObject)
+        pdf.print_key(keyObject)
         pdf.output(download_dir)
-        os.remove("id_barcode.png")
-        os.remove("key_barcode.png")
+        os.remove("key_barcode.svg")
 
     #############################################################
     def create_keyEntry() -> None:
