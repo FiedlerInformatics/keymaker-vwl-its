@@ -20,13 +20,20 @@ from io import StringIO
 from datetime import date
 from ctypes import windll
 from configparser import ConfigParser
-import createDatasheetPDF
 from fpdf import FPDF
 from pathlib import Path
 import barcode
 from barcode.writer import SVGWriter
 
 keyObject = None
+
+def resource_path(relative_path):
+    """ Gibt den absoluten Pfad zur Ressource zurück, funktioniert für Entwicklung und PyInstaller """
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 def openMainWindow(keyObject:Key):
         
@@ -242,8 +249,8 @@ def openMainWindow(keyObject:Key):
             return "id_barcode.svg"
 
         def create_key_barcode(keyobject:Key) -> str:
-            EAN = barcode.get_barcode_class('code39')
-            idIO = EAN(keyobject.key.replace("-", ""), writer=SVGWriter(),add_checksum = True)
+            EAN = barcode.get_barcode_class('code128')
+            idIO = EAN(keyobject.key.replace("-", ""), writer=SVGWriter())
             idIO.save("key_barcode")
             return "key_barcode.svg"
 
@@ -303,10 +310,10 @@ def openMainWindow(keyObject:Key):
                             align="L")  
         
         def key_barcode(self,keyObject:Key) -> None:
-            self.image(PDF.create_key_barcode(keyObject),17.5,200,175)
+            self.image(PDF.create_key_barcode(keyObject),17.5,175,175,25)
 
         def print_key(self,keyObject:Key) -> None:
-            self.set_y(215)
+            self.set_y(190)
             self.set_font("helvetica", style="B" , size=12)
             self.cell(10)
             self.cell(170,20, keyObject.key, border=0, align="C")
@@ -403,7 +410,7 @@ def openMainWindow(keyObject:Key):
     ######################################################################################
     style = ttk.Style(main_window)
     style.theme_use("vista")
-    main_window.iconbitmap(default="keymaker_images/lockSymbol.ico")
+    main_window.iconbitmap("keymaker_images/keymaker_logo.ico")
 
     create_key_windowButton = ttk.Label(main_window,text="Key erstellen",image=createKey_symbol,compound='left', font="Helvetica 12 bold", cursor="hand2")
     print_key_windowButton = ttk.Label(main_window,text="Key drucken", image=printKey_symbol, compound='left', font="Helvetica 12", cursor="hand2")

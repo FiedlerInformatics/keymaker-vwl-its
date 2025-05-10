@@ -27,6 +27,15 @@ login_window.geometry("700x433")
 login_window.resizable(False,False)
 login_window.title("Keymaker")
 ########################################################
+
+def resource_path(relative_path):
+    """ Gibt den absoluten Pfad zur Ressource zurück, funktioniert für Entwicklung und PyInstaller """
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 def getDataBase() -> None:
     global corruptDatabasePath
     password_entry.delete(0, tk.END)  # Löschen des Passwortfeldes
@@ -38,6 +47,7 @@ def getDataBase() -> None:
         title="Datenbank auswählen",
         filetypes=[("KeePass Database", "*.kdbx")],
     )
+
     if keyObject.database_path:
         database_entry.insert(0, keyObject.database_path)
         database_entry.config(fg="black")
@@ -113,10 +123,11 @@ def check_password() -> bool:
 ############################################################
 style = ttk.Style()
 style.theme_use("vista")
-login_window.iconbitmap(default="keymaker_images/lockSymbol.ico")
+login_window.iconbitmap(resource_path("keymaker_images/keymaker_logo.ico"))
 
-image = ImageTk.PhotoImage(Image.open("keymaker_images/loginImage2.jpg")) # Bild am Rand 
+image = ImageTk.PhotoImage(Image.open(resource_path("keymaker_images/loginImage2.jpg"))) # Bild am Rand 
 image_label = ttk.Label(login_window, image=image)
+image_label.image = image
 
 keymakerHeader = ttk.Label(login_window,text="Keymaker",font="Helvetica 40 bold")
 datenbankAuswahlMeldung = ttk.Label(login_window, text="Wählen Sie eine .kdbx-Datei", font="Helvetica")
