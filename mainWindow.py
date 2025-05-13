@@ -3,18 +3,13 @@ from keepassObject import Key
 from tkinter import *
 import tkinter as tk
 from tkinter import ttk, filedialog
-from tkinter import BooleanVar
-import sv_ttk
 import pykeepass
 from pykeepass import PyKeePass
 from pathlib import Path
 from PIL import ImageTk, Image
 from keepassObject import Key
-import subprocess
-import pickle
 import os
 import re
-import pyAesCrypt
 import sys
 from io import StringIO
 from datetime import date
@@ -22,7 +17,6 @@ from ctypes import windll
 from configparser import ConfigParser
 from fpdf import FPDF
 from pathlib import Path
-import barcode
 from barcode.writer import SVGWriter
 from cratePDF import PDF
 
@@ -77,17 +71,16 @@ def openMainWindow(keyObject:Key):
         for widget in createKey_windowsLayout.keys():
             set_opacity(widget, 1)
 
-
-    def get_txtpath_from_database(entry) -> str:
-        for att in entry.attachments:
-            try:
-                if att.filename.endswith('.txt'):
-                    with open(att.filename, 'wb') as f:
-                        f.write(att.data)
-                        return att.filename
-            except AttributeError as e:
-                print("Unable to read txt-file from Keepass Database " + e)
-                
+    def check_input_completeness() -> bool:
+        if len(txt_entry.get()) == 0 or len(person_input.get()) == 0 or len(geraet_input.get())== 0 or lehrstuhl_input.get() == "Lehrstuhl auswählen" or len(seriennummer_input.get()) == 0 or len(datum_input.get()) == 0 or len(hilfskraft_input.get()) == 0:
+            for label in [person_label, geraet_label, lehrstuhl_label, seriennummer_label, hilfskraft_label, datum_label, bitlocker_bezeichner_label, bitlocker_key_label]:
+                label.config(fg="red")
+            return False
+        else:
+            mainWindow_error.config(text="")
+            set_opacity(mainWindow_error,0)
+            return True
+    
     def print_key() -> None:
         entryString = database_entries_dropdown.get()
         if entryString != "Key auswählen":
@@ -204,7 +197,10 @@ def openMainWindow(keyObject:Key):
         keyObject.lehrstuhl = lehrstuhl_input.get()
         keyObject.serienNummer = seriennummer_input.get()
         keyObject.date = datum_input.get()
-        keyObject.ivs = inventarnummer_input.get()
+        if len(inventarnummer_input.get()) > 0:
+            keyObject.ivs = inventarnummer_input.get()
+        else:
+            keyObject.ivs = ""
         keyObject.hiwi = hilfskraft_input.get()
         keyObject.id = bitlocker_bezeichner_input.get()
         keyObject.key = bitlocker_key_input.get()
@@ -241,7 +237,6 @@ def openMainWindow(keyObject:Key):
         newFilename = newFilename.replace("/"," ").replace("\\","").replace(":"," ").replace("?","").replace("*","").replace("<","").replace(">","")
         return newFilename
 
-       
     def txt_to_pdf(keyObject:Key):
         download_dir = Path.home() / "Downloads" / name_pdf(keyObject)
         pdf = PDF()
@@ -262,14 +257,23 @@ def openMainWindow(keyObject:Key):
         person_input.config(fg="black")
         geraet_input.config(fg="black")
 
+        for label in [person_label, geraet_label, lehrstuhl_label, seriennummer_label, hilfskraft_label, datum_label, bitlocker_bezeichner_label, bitlocker_key_label]:
+            label.config(fg="black")
+
         get_fieldInputs()
+        if not check_input_completeness():
+            set_opacity(mainWindow_success,0)
+            set_opacity(mainWindow_error,1)
+            mainWindow_error.config(text="Eingabe unvollständig", fg="red")
+            return
+        
         kp = PyKeePass(keyObject.database_path,keyObject.password)
 
         existingEntry = kp.find_entries(title=keyObject.user + " " + keyObject.geraet, first=True)
         if existingEntry:
             set_opacity(mainWindow_success, 0)
+            set_opacity(mainWindow_error, 1)
             mainWindow_error.config(text="Eintrag mit dieser Bezeichnung existiert bereits", fg="red")
-            mainWindow_success
             person_input.config(fg="red")
             geraet_input.config(fg="red")
             checkFor_personInput_change.last_value = person_input.get()
@@ -281,7 +285,7 @@ def openMainWindow(keyObject:Key):
             generalGroup,
             title = keyObject.user + " " + keyObject.geraet,
             username = keyObject.user,
-            password = keyObject.key # Bitlocker key
+            password = keyObject.key
         )
         entry.set_custom_property("Name", keyObject.user)
         entry.set_custom_property("Wiederherstellungsschluessel", keyObject.key)
@@ -290,38 +294,43 @@ def openMainWindow(keyObject:Key):
         entry.set_custom_property("Datum", keyObject.date)
         entry.set_custom_property("Lehrstuhl", keyObject.lehrstuhl)
         entry.set_custom_property("Hilfskraft", keyObject.hiwi)
-
         entry.set_custom_property("Seriennummer", keyObject.serienNummer)
-        entry.set_custom_property("Inventarisierungsnummer", keyObject.ivs)
+        if inventarnummer_input.get():
+            entry.set_custom_property("Inventarisierungsnummer", keyObject.ivs)
 
-        with open(keyObject.txt_path, 'rb') as f:
-            binary_id = kp.add_binary(f.read())
-            entry.add_attachment(binary_id,rename_txt())
-
+        if len(keyObject.txt_path) > 0:
+            try:
+                with open(keyObject.txt_path, 'rb') as f:
+                    binary_id = kp.add_binary(f.read())
+                    entry.add_attachment(binary_id, rename_txt()) 
+            except (FileNotFoundError, IOError) as e:
+                mainWindow_error.config(text=f"Fehler beim Anhängen der Datei: {e}", fg="red")
+                
         set_opacity(mainWindow_success, 1)
+        set_opacity(mainWindow_error, 0)
         mainWindow_success.config(text="Eintrag erfolgreich erstellt")
 
-        if create_pdf_checkButton_bool.get() == 1:
+        if create_pdf_checkButton_bool.get() == 1 :
+            #print("check_input_completeness: " + str(check_input_completeness()) )
             txt_to_pdf(keyObject)
+            kp.save()
 
-        kp.save()
+    createKey_symbol = ImageTk.PhotoImage(Image.open(resource_path('keymaker_images/createkeySymbol.png')))
+    printKey_symbol = ImageTk.PhotoImage(Image.open(resource_path('keymaker_images/printKeySymbol.png')))
 
-    createKey_symbol = ImageTk.PhotoImage(Image.open(rb'keymaker_images/createkeySymbol.png'))
-    printKey_symbol = ImageTk.PhotoImage(Image.open(rb'keymaker_images/printKeySymbol.png'))
-
-    key_symbol = ImageTk.PhotoImage(Image.open(rb'keymaker_images/keySymbol.png'))
-    calendar_symbol = ImageTk.PhotoImage(Image.open(rb'keymaker_images/calendarSymbol.png'))
-    person_symbol = ImageTk.PhotoImage(Image.open(rb'keymaker_images/userSymbol.png'))
-    lehrstuhl_symbol= ImageTk.PhotoImage(Image.open(rb'keymaker_images/lehrstuhlSymbol.png'))
-    id_symbol= ImageTk.PhotoImage(Image.open(rb'keymaker_images/idSymbol.png'))
-    geraet_symbol= ImageTk.PhotoImage(Image.open(rb'keymaker_images/geraetSymbol.png'))
-    hiwi_symbol= ImageTk.PhotoImage(Image.open(rb'keymaker_images/hiwiSymbol.png'))
-    seriennummer_symbol= ImageTk.PhotoImage(Image.open(rb'keymaker_images/seriennummerSymbol.png'))
-    inventarnummer_symbol= ImageTk.PhotoImage(Image.open(rb'keymaker_images/ivnSymbol.png'))
+    key_symbol = ImageTk.PhotoImage(Image.open(resource_path('keymaker_images/keySymbol.png')))
+    calendar_symbol = ImageTk.PhotoImage(Image.open(resource_path('keymaker_images/calendarSymbol.png')))
+    person_symbol = ImageTk.PhotoImage(Image.open(resource_path('keymaker_images/userSymbol.png')))
+    lehrstuhl_symbol = ImageTk.PhotoImage(Image.open(resource_path('keymaker_images/lehrstuhlSymbol.png')))
+    id_symbol = ImageTk.PhotoImage(Image.open(resource_path('keymaker_images/idSymbol.png')))
+    geraet_symbol = ImageTk.PhotoImage(Image.open(resource_path('keymaker_images/geraetSymbol.png')))
+    hiwi_symbol = ImageTk.PhotoImage(Image.open(resource_path('keymaker_images/hiwiSymbol.png')))
+    seriennummer_symbol = ImageTk.PhotoImage(Image.open(resource_path('keymaker_images/seriennummerSymbol.png')))
+    inventarnummer_symbol = ImageTk.PhotoImage(Image.open(resource_path('keymaker_images/ivnSymbol.png')))
     ######################################################################################
     style = ttk.Style(main_window)
     style.theme_use("vista")
-    main_window.iconbitmap("keymaker_images/keymaker_logo.ico")
+    main_window.iconbitmap(resource_path("keymaker_images/keymaker_logo.ico"))
 
     create_key_windowButton = ttk.Label(main_window,text="Key erstellen",image=createKey_symbol,compound='left', font="Helvetica 12 bold", cursor="hand2")
     print_key_windowButton = ttk.Label(main_window,text="Key drucken", image=printKey_symbol, compound='left', font="Helvetica 12", cursor="hand2")
@@ -331,34 +340,34 @@ def openMainWindow(keyObject:Key):
     browse_txt = ttk.Button(main_window, text=".txt-Datei")
     txt_entry = tk.Entry(main_window, font=("Helvetica 12"))
 
-    person_label = ttk.Label(main_window,text="Person",image=person_symbol,compound='left',font="Helvetica 12")
+    person_label = tk.Label(main_window,text="Person",image=person_symbol,compound='left',font="Helvetica 12")
     person_input = tk.Entry(main_window, font=("Helvetica 12"))
 
-    geraet_label = ttk.Label(main_window,text="Gerät", image=geraet_symbol, compound='left', font="Helvetica 12")
+    geraet_label = tk.Label(main_window,text="Gerät", image=geraet_symbol, compound='left', font="Helvetica 12")
     geraet_input = tk.Entry(main_window,font=("Helvetica 12"))
 
-    lehrstuhl_label = ttk.Label(main_window, text="Lehrstuhl",image=lehrstuhl_symbol,compound='left',font="Helvetica 12")
+    lehrstuhl_label = tk.Label(main_window, text="Lehrstuhl",image=lehrstuhl_symbol,compound='left',font="Helvetica 12")
     lehrstuhl_var = tk.StringVar()
     lehrstuhl_input = ttk.Combobox(main_window, textvariable=lehrstuhl_var,values=create_lehrstuhlLst(database), font=("Helvetica", 12))
     lehrstuhl_input.set("Lehrstuhl auswählen") # Setzen des Standardwerts auf "Lehrstuhl auswählen"
 
-    seriennummer_label = ttk.Label(main_window, text="Seriennummer",image=seriennummer_symbol, compound='left',font="Helvetica 12")
+    seriennummer_label = tk.Label(main_window, text="Seriennummer",image=seriennummer_symbol, compound='left',font="Helvetica 12")
     seriennummer_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
-    datum_label = ttk.Label(main_window, text="Datum",image=calendar_symbol, compound='left', font="Helvetica 12")
+    datum_label = tk.Label(main_window, text="Datum",image=calendar_symbol, compound='left', font="Helvetica 12")
     datum_input = ttk.Entry(main_window, font=("Helvetica 12"))
     datum_input.insert(0,date.today().strftime("%d.%m.%Y")) # Setzen des Datums auf das heutige Datum
 
     inventarnummer_label = ttk.Label(main_window, text="Inventarnummer",image=inventarnummer_symbol, compound='left',  font="Helvetica 12 ")
     inventarnummer_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
-    hilfskraft_label = ttk.Label(main_window, text="Hilfskraft", image=hiwi_symbol, compound='left', font="Helvetica 12")
+    hilfskraft_label = tk.Label(main_window, text="Hilfskraft", image=hiwi_symbol, compound='left', font="Helvetica 12")
     hilfskraft_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
-    bitlocker_key_label = ttk.Label(main_window, text="Bitlocker Key",image=key_symbol, compound='left', font="Helvetica 12")
+    bitlocker_key_label = tk.Label(main_window, text="Bitlocker Key",image=key_symbol, compound='left', font="Helvetica 12")
     bitlocker_key_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
-    bitlocker_bezeichner_label = ttk.Label(main_window, text="Bitlocker Bezeichner",image=id_symbol, compound='left', font="Helvetica 12")
+    bitlocker_bezeichner_label = tk.Label(main_window, text="Bitlocker Bezeichner",image=id_symbol, compound='left', font="Helvetica 12")
     bitlocker_bezeichner_input = ttk.Entry(main_window, font=("Helvetica 12"))
 
     create_pdf_checkButton_bool = IntVar(value=1)  # Set default state to checked
