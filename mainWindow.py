@@ -18,7 +18,7 @@ from configparser import ConfigParser
 from fpdf import FPDF
 from pathlib import Path
 from barcode.writer import SVGWriter
-from cratePDF import PDF
+from createPDF import PDF
 
 keyObject = None
 
@@ -313,7 +313,8 @@ def openMainWindow(keyObject:Key):
         if create_pdf_checkButton_bool.get() == 1 :
             #print("check_input_completeness: " + str(check_input_completeness()) )
             txt_to_pdf(keyObject)
-            kp.save()
+            
+        kp.save()
 
     createKey_symbol = ImageTk.PhotoImage(Image.open(resource_path('keymaker_images/createkeySymbol.png')))
     printKey_symbol = ImageTk.PhotoImage(Image.open(resource_path('keymaker_images/printKeySymbol.png')))
