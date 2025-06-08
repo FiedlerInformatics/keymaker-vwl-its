@@ -73,7 +73,7 @@ class PDF(FPDF):
                             align="L")  
         
         def key_barcode(self,keyObject:Key) -> None:
-            self.image(PDF.create_key_barcode(keyObject),17.5,175,175,25)
+            self.image(PDF.create_key_barcode(keyObject),17.5,215,175,25)
 
         def print_key(self,keyObject:Key) -> None:
             self.set_y(190)
