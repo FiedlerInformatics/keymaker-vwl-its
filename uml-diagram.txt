@@ -1,0 +1,126 @@
+@startuml
+class Key{
+  String: password
+  String: database_path
+  String: txt_path
+  String: user
+  String: geraet
+  String: lehrstuhl
+  String: seriennummer
+  String: date
+  String: ivs
+  String: hiwi
+  String: id
+  String: key
+}
+
+abstract WARNING{
+  warning_window
+  warning_text
+  button_verwerfen
+  button_ueberschreiben
+}
+
+class WARNING_INVENTAR{}
+
+class WARNING_INVENTAR_SERIENNUMMER{}
+
+class loginWindow <<file>>{
+  Key: keyObject
+  LOGIN: loginwindow_obj
+  read_INI_path()
+  get_DataBase()
+  login()
+}
+
+class mainWindow <<file>>{
+  entriesDict
+  PyKeePass: database
+  mainWindow_obj
+  
+  create_lehrstuhlLst(Key): list[str]
+  create_entriesLst(Key): list[str]
+  openMainWindow(Key)
+  create_entriesDict():dict[str,dict[str,str]]
+  set_opacity()
+  remove_createKey_window()
+  show_createKey_window()
+  printKey_window()
+  createKey_window()
+  check_input_completeness()
+  printKey()
+  clear_mainWindow_inputFields()
+  getKeyTxtFile()
+  extract_ID_KEY(): Tuple
+  remove_CRLF(str): StringIO
+  get_fieldInputs()
+  checkFor_personInput_change()
+  checkFor_geraetInput_change()
+  rename()
+  txt_to_pdf(Key)
+  write_entry(Entry)
+  handle_dublicates(entry)
+  create_entry()
+  make_keyEntry()
+  search_seriennummer()
+  
+  
+  
+  
+}
+
+class loginWindowGUI{
+  login_window
+  keymakerHeader
+  Label: datenbankAuswahlMeldung
+  Label: error_message
+  Button: browse_database
+  Entry: database_entry
+  Label: password_label
+  Entry: password_entry
+  Button: login_button
+}
+
+class mainWindowGUI{
+  main_window
+  Button: create_key_windowButton
+  Button: print_key_windowButton
+  trennlinie
+  Button: browse_text
+  Entry: txt_entry
+  Label: person_label
+  Entry: person_entry
+  
+}
+
+class PDF <<createPDF>>{
+  header
+  device_info
+  bezeichner_txt
+  key_txt
+  key_barcode
+  footer  
+  create_id_barcode()
+  create_key_barcode()
+  print_bezeichner()
+  print_key
+}
+
+class helper <<file>>{
+  resource_path(relative_path:str)
+}
+
+WARNING <|-- "1 | 0" WARNING_INVENTAR
+WARNING <|-- "1 | 0" WARNING_INVENTAR_SERIENNUMMER
+
+helper -- WARNING
+helper -- loginWindow
+helper -- mainWindow
+
+loginWindowGUI <-- loginWindow
+mainWindowGUI <-- mainWindow
+PDF <-- mainWindow
+Key <-- loginWindow
+Key <-- mainWindow
+Key <-- PDF
+@enduml
