@@ -9,10 +9,10 @@ Laden Sie den Ordner 'keymaker' mit der darin enthaltenen 'keymaker.exe' runter 
 Nach der ersten Nutzung wird der Dateipfad zur Datenbank in der Datei 'databasePath.ini' im selben Ordner gespeichert.
 
 Alternativ kann auch das gesamte Github Repository mithilfe der Batch-Datei 'build_keymaker.bat' neu kompiliert werden. Hierfür muss zuvor die [PyInstaller Library](https://pyinstaller.org/en/stable/) installiert werden:
-'''
+``` bash
 pip install -U pyinstaller
-'''
-### Screenshots
+```
+## Screenshots
 #### Login window
 ![keymaker login window](https://github.com/FiedlerInformatics/keymaker-vwl-its/blob/main/keymaker_images/Screenshot_loginWindow.jpg)
 
@@ -25,5 +25,5 @@ pip install -U pyinstaller
 #### Warning Windows
 ![keymaker login window](https://github.com/FiedlerInformatics/keymaker-vwl-its/blob/main/keymaker_images/warning_windows.jpg)
 
-#### Data sheet
+### Data sheet
 ![keymaker data sheet](https://github.com/FiedlerInformatics/keymaker-vwl-its/blob/main/keymaker_images/bitlocker-datasheet-example.jpg)
