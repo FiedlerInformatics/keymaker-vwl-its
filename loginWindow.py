@@ -22,6 +22,7 @@ loginwindow_obj = LOGIN()
 ########################################################
 
 def read_INI_path() -> str:
+    """Returns the last used database path if a .ini file exists"""
     config = configparser.ConfigParser()
     config.read('databasePath.ini')
     if 'Path' not in config or 'lastdatabasepath' not in config['Path']:
@@ -31,21 +32,20 @@ def read_INI_path() -> str:
         return  config['Path']['lastdatabasepath']
 
 def getDataBase() -> None:
-   
+    """Opens a file dialog and writes the path of the chosen database in the 'database_path' entry field"""   
     keyObject.database_path = filedialog.askopenfilename(
         title= "Datenbank auswählen",
         filetypes=[("KeePass Database", "*.kdbx")]
    )
    # Lösche vorherige Eingabe
     loginwindow_obj.database_entry.delete(0, tk.END)
-
     if keyObject.database_path:
         loginwindow_obj.database_entry.insert(0, keyObject.database_path)
         loginwindow_obj.database_entry.config(fg="black")
         loginwindow_obj.error_message.config(text="")
     
-    
 def login() -> None:
+    """Reads the """
     def checkPassword() -> bool:
         try: pk= PyKeePass(loginwindow_obj.database_entry.get(), password=loginwindow_obj.password_entry.get())
         except pykeepass.exceptions.CredentialsError:
@@ -53,10 +53,16 @@ def login() -> None:
         return True
 
     def write_INI_path(path:str) -> None:
+        """Writes the database path to the .ini file, if login was successful """
         config = configparser.ConfigParser()
         config['Path'] = {'lastDatabasePath': path}
         with open('databasePath.ini', 'w+') as configfile:
             config.write(configfile)
+
+    def open_mainWindow() -> None:
+        """Creates a mainwindow GUI and closes the current login window GUI"""
+        loginwindow_obj.login_window.destroy()
+        mainWindow.openMainWindow(keyObject)
 
     if len(keyObject.database_path) == 0:
         loginwindow_obj.error_message.config(text="Es wurde keine Datei ausgewählt", fg="red")
@@ -71,21 +77,6 @@ def login() -> None:
             keyObject.database_path = loginwindow_obj.database_entry.get()
             write_INI_path(keyObject.database_path)
             open_mainWindow()
-
-def check_password() -> bool:
-    try: pk= PyKeePass(loginwindow_obj.database_entry.get(), password=loginwindow_obj.password_entry.get())
-    except pykeepass.exceptions.CredentialsError:
-        return False
-    return True
-
-def serialisation(kpo: Key) -> None:
-    with open("keyObj.pickle", "wb") as f:
-        pickle.dump(kpo, f)
-        f.close()
-
-def open_mainWindow() -> None:
-    loginwindow_obj.login_window.destroy()
-    mainWindow.openMainWindow(keyObject)
     
 if os.path.isfile("databasePath.ini"):
     ini_path = read_INI_path()
