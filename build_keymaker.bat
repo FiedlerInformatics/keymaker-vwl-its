@@ -19,7 +19,6 @@ pyinstaller loginWindow.py --onefile --noconsole ^
 --name "keymaker" ^
 --icon=keymaker_images\keymaker_logo.ico ^
 --add-data "keymaker_images\*.png;keymaker_images" ^
---add-data "keymaker_images\*.jpg;keymaker_images" ^
 --add-data "keymaker_images\*.ico;keymaker_images"
 
 del /f /q *.spec

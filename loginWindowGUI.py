@@ -22,7 +22,7 @@ class LOGIN():
     style = ttk.Style()
     style.theme_use("vista")
     login_window.iconbitmap(resource_path("keymaker_images/keymaker_logo.ico"))
-    image = ImageTk.PhotoImage(Image.open(resource_path("keymaker_images/loginImage2.jpg"))) # Bild am Rand 
+    image = ImageTk.PhotoImage(Image.open(resource_path("keymaker_images/loginImage.png"))) # Bild am Rand 
     image_label = ttk.Label(login_window, image=image)
     image_label.image = image
     keymakerHeader = ttk.Label(login_window,text="Keymaker",font="Helvetica 40 bold")
