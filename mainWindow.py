@@ -169,15 +169,15 @@ def openMainWindow(keyObject:Key):
         if entryString != "Key auswählen":
             entryString = os.path.basename(entryString) # Entfernt die Dateipfade der Einträge
             entry = database.find_entries(title=entryString, first=True)
-            keyObject.user = entry.get_custom_property("Name")
-            keyObject.geraet = entry.get_custom_property("Gerät")
-            keyObject.lehrstuhl = entry.get_custom_property("Lehrstuhl")
-            keyObject.serienNummer = entry.get_custom_property("Seriennummer")
-            keyObject.date = entry.get_custom_property("Datum")
-            keyObject.ivs = entry.get_custom_property("Inventarisierungsnummer")
-            keyObject.hiwi = entry.get_custom_property("Hilfskraft")
-            keyObject.id = entry.get_custom_property("Bezeichner")
-            keyObject.key = entry.get_custom_property("Wiederherstellungsschluessel")
+            keyObject.user = entry.get_custom_property("Name") or ""
+            keyObject.geraet = entry.get_custom_property("Gerät") or ""
+            keyObject.lehrstuhl = entry.get_custom_property("Lehrstuhl") or ""
+            keyObject.serienNummer = entry.get_custom_property("Seriennummer") or ""
+            keyObject.date = entry.get_custom_property("Datum") or ""
+            keyObject.ivs = entry.get_custom_property("Inventarisierungsnummer") or ""
+            keyObject.hiwi = entry.get_custom_property("Hilfskraft") or ""
+            keyObject.id = entry.get_custom_property("Bezeichner") or ""
+            keyObject.key = entry.get_custom_property("Wiederherstellungsschluessel") or ""
             try:
                 txt_to_pdf(keyObject)
                 set_opacity(printKey_window_error,0)
@@ -201,6 +201,7 @@ def openMainWindow(keyObject:Key):
         mainWindow_obj.mainWindow_error.config(text="")
         mainWindow_obj.mainWindow_success.config(text="")
 
+
     def getKeyTxtFile() -> None:
         """Opens a filedialog to choose and check a valid .txt-Bitlocker key"""
         clear_mainWindow_inputFields() # Löschen der Eingaben im main window
@@ -214,9 +215,9 @@ def openMainWindow(keyObject:Key):
                 mainWindow_obj.txt_entry.insert(0,keyObject.txt_path)
                 mainWindow_obj.txt_entry.config(fg="black")
                 mainWindow_obj.bitlocker_bezeichner_input.insert(0,keyObject.id)
-                mainWindow_obj.bitlocker_bezeichner_input.config(state="disabled")
+                mainWindow_obj.bitlocker_bezeichner_input.config(state="disabled") # Blocking manual input
                 mainWindow_obj.bitlocker_key_input.insert(0,keyObject.key)
-                mainWindow_obj.bitlocker_key_input.config(state="disabled")
+                mainWindow_obj.bitlocker_key_input.config(state="disabled")  # Blocking manual input
             except TypeError as e:
                 # Ausgeben der Fehlermeldung im Textfeld 
                 mainWindow_obj.txt_entry.insert(0, "kein gültiger Key" + str(e))
@@ -353,6 +354,8 @@ def openMainWindow(keyObject:Key):
             warningWindow_obj.warning_window.destroy()
         ))
         warningWindow_obj.button_verwerfen.bind("<Button-1>", lambda event: (
+            mainWindow_obj.bitlocker_bezeichner_input.config(state="enabled"), # Enabeling manual input to delete it
+            mainWindow_obj.bitlocker_key_input.config(state="enabled"),  # Enabling manual input to delete it
             clear_mainWindow_inputFields(),
             warningWindow_obj.warning_window.destroy()
         ))
