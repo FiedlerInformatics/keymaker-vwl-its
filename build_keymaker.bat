@@ -5,6 +5,7 @@ echo =====================================
 
 REM Verzeichnisse löschen
 rmdir /s /q build
+rmdir /s /q keymaker
 rmdir /s /q dist
 rmdir /s /q __pycache__
 

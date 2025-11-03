@@ -189,6 +189,9 @@ def openMainWindow(keyObject:Key):
 
     # Entferne alle Eingaben aus den Inputfeldern des main windows
     def clear_mainWindow_inputFields() -> None:
+        mainWindow_obj.bitlocker_bezeichner_input.config(state="enabled") # Enabling manual input
+        mainWindow_obj.bitlocker_key_input.config(state="enabled")  # Enabling manual input
+        
         mainWindow_obj.person_input.delete(0, tk.END)
         mainWindow_obj.geraet_input.delete(0, tk.END)
         mainWindow_obj.seriennummer_input.delete(0, tk.END)
