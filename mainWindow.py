@@ -26,46 +26,57 @@ from pathlib import Path
 from barcode.writer import SVGWriter
 from createPDF import PDF
 
-def create_lehrstuhlLst(PyKeePass) -> list[str]:
-    """Returns a List of all subdirectories of the 'General' directory"""
-    regex = r'General/Bitlocker/.*'
-    strLst = []
-    for i in range(len(PyKeePass.groups)): 
-        strVar = str(PyKeePass.groups[i]).replace('Group: ', '').replace('"','')
-        if re.match(regex, strVar): 
-            strLst.append(strVar.replace('General/Bitlocker/', ''))
-    return strLst
-
-def create_entriesLst(PyKeePass) -> list[str]:
-    regex = r'General/Bitlocker/.*'
-    strLst = []
-    for i in range(len(PyKeePass.entries)): 
-        strVar = str(PyKeePass.entries[i]).replace('Entry: ', '').replace('"','')
-        if re.match(regex, strVar): 
-            strLst.append(strVar.replace('(None)', ''))
-    for i in range (len(strLst)):
-        strLst[i] = re.sub(r"[\(\[].*?[\)\]]", "", strLst[i]).strip()
-    return strLst
-
 def openMainWindow(keyObject:Key):
+    
+    entryLst = []
+    entryDict = {}
 
-    def create_entriesDict() -> dict[str, dict[str, str]]:
-        """Returns a nested dictionary: [Titel,[Seriennummer, Inventarisierungsnummer]]"""
-        entrdic = {}
-        entrLst = create_entriesLst(database)
-        for entry_path in entrLst:
-            entry_title = os.path.basename(entry_path) # Enfernt die Dateipfade der Einträge
-            entry = database.find_entries(title=entry_title, first=True)
-            if entry:
-                entrdic[entry_title] = {
-                    "Seriennummer": entry.get_custom_property("Seriennummer") or "",
-                    "Inventarisierungsnummer": entry.get_custom_property("Inventarisierungsnummer") or ""
-                }
-        return entrdic
+    def create_lehrstuhlLst(PyKeePass) -> list[str]:
+        """Returns a List of all subdirectories of the 'General' directory"""
+        regex = r'General/Bitlocker/.*'
+        strLst = []
+        for i in range(len(PyKeePass.groups)): 
+            strVar = str(PyKeePass.groups[i]).replace('Group: ', '').replace('"','')
+            if re.match(regex, strVar): 
+                strLst.append(strVar.replace('General/Bitlocker/', ''))
+        return strLst
+
+
+    def init_enty_List_Dict(kp) -> None:
+        general = kp.find_groups(name="General", first = True, recursive = True)
+
+        def iter_groups(group):
+            yield group
+            for child in group.subgroups:
+                yield from iter_groups(child)
+    
+        for g in iter_groups(general):
+            for e in g.entries:
+                if e:
+                    name_title = ""
+                    if(not e.title or not e.title.strip()):
+                        name_title = e.get_custom_property("Name")
+                        entryLst.append(g.name + "/" + name_title)
+                    else:
+                        name_title = e.title
+                        entryLst.append(g.name + "/" + name_title)
+
+                    entryDict[name_title] = {
+                        "Seriennummer": e.get_custom_property("Seriennummer") or "",
+                        "Inventarisierungsnummer": e.get_custom_property("Inventarisierungsnummer") or ""
+                    }
 
     database = PyKeePass(keyObject.database_path, keyObject.password)
-    mainWindow_obj = MAIN(create_lehrstuhlLst(database), create_entriesLst(database))
-    entryDict = create_entriesDict()
+    init_enty_List_Dict(database)
+
+    print("----------------------------------------")
+    print("Entry Dict:")
+    print(entryDict)
+    print("Entry List:")
+    print(entryLst)
+    print("----------------------------------------")
+
+    mainWindow_obj = MAIN(create_lehrstuhlLst(database), entryLst)
 
     # https://stackoverflow.com/questions/77840560/why-opacity-in-tkinter-widgets-not-supported
     def set_opacity(widget, value: float):
@@ -166,9 +177,31 @@ def openMainWindow(keyObject:Key):
     def print_key() -> None:
         """Reads the entry path user input from the drop-down menu and creates a PDF with it"""
         entryString = database_entries_dropdown.get()
+       
         if entryString != "Key auswählen":
             entryString = os.path.basename(entryString) # Entfernt die Dateipfade der Einträge
-            entry = database.find_entries(title=entryString, first=True)
+
+            print("-------------------------------------------------")
+            print("Entry String:")
+            print(entryString)
+            print("-------------------------------------------------")
+
+            entry = database.find_entries(title=entryString, first=True, recursive=True)
+            if(entry is None):
+                general = database.find_groups(name="General", first=True, recursive =True)
+                def iter_groups(g):
+                    yield g
+                    for child in g.subgroups:
+                        yield from iter_groups(child)
+
+                for g in iter_groups(general):
+                    for e in g.entries:
+                        if e.get_custom_property("Name") == entryString:
+                            entry = e
+                            break
+                    if entry:
+                        break
+
             keyObject.user = entry.get_custom_property("Name") or ""
             keyObject.geraet = entry.get_custom_property("Gerät") or ""
             keyObject.lehrstuhl = entry.get_custom_property("Lehrstuhl") or ""
@@ -412,7 +445,7 @@ def openMainWindow(keyObject:Key):
         database.save()
 
     entrieset_var = tk.StringVar()
-    database_entries_dropdown = ttk.Combobox(mainWindow_obj.main_window, textvariable=entrieset_var, values=create_entriesLst(database), font=("Helvetica", 12))
+    database_entries_dropdown = ttk.Combobox(mainWindow_obj.main_window, textvariable=entrieset_var, values=entryLst, font=("Helvetica", 12))
     database_entries_dropdown.set("Key auswählen")
     print_key_button = ttk.Button(mainWindow_obj.main_window, text="PDF erstellen")
     printKey_window_success = tk.Label(mainWindow_obj.main_window, text="", font="Helvetica 12", fg="green", width=35, anchor="center",justify= 'center')
