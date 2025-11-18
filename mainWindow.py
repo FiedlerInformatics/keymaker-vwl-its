@@ -41,15 +41,16 @@ def openMainWindow(keyObject:Key):
                 strLst.append(strVar.replace('General/Bitlocker/', ''))
         return strLst
 
+    def iter_groups(group):
+        """Iterates over the entries of a KeePass-directory"""
+        yield group
+        for child in group.subgroups:
+            yield from iter_groups(child)
+
 
     def init_enty_List_Dict(kp) -> None:
         general = kp.find_groups(name="General", first = True, recursive = True)
-
-        def iter_groups(group):
-            yield group
-            for child in group.subgroups:
-                yield from iter_groups(child)
-    
+            
         for g in iter_groups(general):
             for e in g.entries:
                 if e:
@@ -189,10 +190,6 @@ def openMainWindow(keyObject:Key):
             entry = database.find_entries(title=entryString, first=True, recursive=True)
             if(entry is None):
                 general = database.find_groups(name="General", first=True, recursive =True)
-                def iter_groups(g):
-                    yield g
-                    for child in g.subgroups:
-                        yield from iter_groups(child)
 
                 for g in iter_groups(general):
                     for e in g.entries:
@@ -376,9 +373,6 @@ def openMainWindow(keyObject:Key):
     def handle_dublicates(double_entry) -> None:
         """Helper of 'make_keyEntry'<br> Creates a warning window which lets the user choose between dicarding the inputs or overwrite the entry with dublicate 'Seriennummer' """
         warningWindow_obj = None
-        print(keyObject)
-        print("------------")
-        print(double_entry)
         if keyObject.ivs == double_entry.get_custom_property("Inventarisierungsnummer"):
             warningWindow_obj = WARNING_INVENTAR_SERIENNUMMER()
         else:
@@ -395,20 +389,33 @@ def openMainWindow(keyObject:Key):
             clear_mainWindow_inputFields(),
             warningWindow_obj.warning_window.destroy()
         ))
-
         #warningWindow_obj.warning_window.mainloop()
         mainWindow_obj.main_window.wait_window(warningWindow_obj.warning_window)
 
     def create_entry():
         """Helper of 'make_keyEntry' <br> Returns a handle to a new new empty PyKeepass entry in the 'General' directory of the database"""
-        generalGroup = database.find_groups(name='General',first=True)
+        generalGroup = database.find_groups(name='General',first=True, recursive= True)
+        print("Creating new entry:")
+        print(keyObject.user)
         new_entry = database.add_entry(
             generalGroup,
-            title = keyObject.user + " " + keyObject.geraet,
-            username = keyObject.user,
-            password = keyObject.key
+            keyObject.user + " " + keyObject.geraet,
+            keyObject.user,
+            keyObject.key
         )
         return new_entry
+
+    def check_for_double_entry(ko:Key) -> bool:
+        """Returns True if the database contains an entry with identical Titel + Gerät identity"""
+        if database.find_entries(title=keyObject.user + " " + keyObject.geraet, first=True):
+            return True
+        else:
+            general = database.find_groups(name="General", first=True, recursive=True)
+            for g in iter_groups(general):
+                for e in g.entries:
+                    if (e.get_custom_property("Name") == ko.user and (e.get_custom_property("Gerät") == ko.geraet or e.get_custom_property("Geraet") == ko.geraet)):
+                        return True
+        return False
 
     def make_keyEntry() -> None:
         mainWindow_obj.mainWindow_error.config(text="") # Clear previous error message
@@ -426,7 +433,7 @@ def openMainWindow(keyObject:Key):
             mainWindow_obj.mainWindow_error.config(text="Eingabe unvollständig", fg="red")
             return
         # Überprüft, ob ein Eintrag mit der Bezeichnung: 'Titel + Gerät' bereits existiert.
-        if database.find_entries(title=keyObject.user + " " + keyObject.geraet, first=True):
+        if check_for_double_entry(keyObject):
             set_opacity(mainWindow_obj.mainWindow_success, 0)
             set_opacity(mainWindow_obj.mainWindow_error, 1)
             mainWindow_obj.mainWindow_error.config(text="Eintrag mit dieser Bezeichnung existiert bereits", fg="red")
@@ -437,6 +444,10 @@ def openMainWindow(keyObject:Key):
             raise ValueError("Eintrag existiert bereits")
         # Creates an empty KeePass entry
         double_entry = search_seriennummer(keyObject.serienNummer)
+        if double_entry:
+            handle_dublicates(double_entry)
+            double_entry = None
+        double_entry = search_ivs(keyObject.ivs)
         if double_entry:
             handle_dublicates(double_entry)
         else:
