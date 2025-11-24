@@ -42,15 +42,13 @@ def openMainWindow(keyObject:Key):
         return strLst
 
     def iter_groups(group):
-        """Iterates over the entries of a KeePass-directory"""
-        yield group
-        for child in group.subgroups:
-            yield from iter_groups(child)
-
+            yield group
+            for child in group.subgroups:
+                yield from iter_groups(child)
 
     def init_enty_List_Dict(kp) -> None:
         general = kp.find_groups(name="General", first = True, recursive = True)
-            
+    
         for g in iter_groups(general):
             for e in g.entries:
                 if e:
@@ -70,12 +68,6 @@ def openMainWindow(keyObject:Key):
     database = PyKeePass(keyObject.database_path, keyObject.password)
     init_enty_List_Dict(database)
 
-    print("----------------------------------------")
-    print("Entry Dict:")
-    print(entryDict)
-    print("Entry List:")
-    print(entryLst)
-    print("----------------------------------------")
 
     mainWindow_obj = MAIN(create_lehrstuhlLst(database), entryLst)
 
@@ -182,11 +174,6 @@ def openMainWindow(keyObject:Key):
         if entryString != "Key auswählen":
             entryString = os.path.basename(entryString) # Entfernt die Dateipfade der Einträge
 
-            print("-------------------------------------------------")
-            print("Entry String:")
-            print(entryString)
-            print("-------------------------------------------------")
-
             entry = database.find_entries(title=entryString, first=True, recursive=True)
             if(entry is None):
                 general = database.find_groups(name="General", first=True, recursive =True)
@@ -215,7 +202,6 @@ def openMainWindow(keyObject:Key):
             except Exception as e:
                 set_opacity(printKey_window_success,0)
                 printKey_window_error.config(text=f"Fehler beim Erstellen des PDFs: {e}")
-                print(f"Error: {e}")
 
     # Entferne alle Eingaben aus den Inputfeldern des main windows
     def clear_mainWindow_inputFields() -> None:
@@ -389,33 +375,20 @@ def openMainWindow(keyObject:Key):
             clear_mainWindow_inputFields(),
             warningWindow_obj.warning_window.destroy()
         ))
+
         #warningWindow_obj.warning_window.mainloop()
         mainWindow_obj.main_window.wait_window(warningWindow_obj.warning_window)
 
     def create_entry():
         """Helper of 'make_keyEntry' <br> Returns a handle to a new new empty PyKeepass entry in the 'General' directory of the database"""
-        generalGroup = database.find_groups(name='General',first=True, recursive= True)
-        print("Creating new entry:")
-        print(keyObject.user)
+        generalGroup = database.find_groups(name='General',first=True)
         new_entry = database.add_entry(
             generalGroup,
-            keyObject.user + " " + keyObject.geraet,
-            keyObject.user,
-            keyObject.key
+            title = keyObject.user + " " + keyObject.geraet,
+            username = keyObject.user,
+            password = keyObject.key
         )
         return new_entry
-
-    def check_for_double_entry(ko:Key) -> bool:
-        """Returns True if the database contains an entry with identical Titel + Gerät identity"""
-        if database.find_entries(title=keyObject.user + " " + keyObject.geraet, first=True):
-            return True
-        else:
-            general = database.find_groups(name="General", first=True, recursive=True)
-            for g in iter_groups(general):
-                for e in g.entries:
-                    if (e.get_custom_property("Name") == ko.user and (e.get_custom_property("Gerät") == ko.geraet or e.get_custom_property("Geraet") == ko.geraet)):
-                        return True
-        return False
 
     def make_keyEntry() -> None:
         mainWindow_obj.mainWindow_error.config(text="") # Clear previous error message
@@ -433,7 +406,7 @@ def openMainWindow(keyObject:Key):
             mainWindow_obj.mainWindow_error.config(text="Eingabe unvollständig", fg="red")
             return
         # Überprüft, ob ein Eintrag mit der Bezeichnung: 'Titel + Gerät' bereits existiert.
-        if check_for_double_entry(keyObject):
+        if database.find_entries(title=keyObject.user + " " + keyObject.geraet, first=True):
             set_opacity(mainWindow_obj.mainWindow_success, 0)
             set_opacity(mainWindow_obj.mainWindow_error, 1)
             mainWindow_obj.mainWindow_error.config(text="Eintrag mit dieser Bezeichnung existiert bereits", fg="red")
@@ -444,10 +417,6 @@ def openMainWindow(keyObject:Key):
             raise ValueError("Eintrag existiert bereits")
         # Creates an empty KeePass entry
         double_entry = search_seriennummer(keyObject.serienNummer)
-        if double_entry:
-            handle_dublicates(double_entry)
-            double_entry = None
-        double_entry = search_ivs(keyObject.ivs)
         if double_entry:
             handle_dublicates(double_entry)
         else:
@@ -485,13 +454,23 @@ def openMainWindow(keyObject:Key):
     def search_seriennummer(sn:str) -> PyKeePass | None:
         """Searchs the KeePass database for a entry with the given 'Seriennummer' and returns it if existing, if not 'None' """
         entrytitle = None
+        entry = None
         for titel,data in entryDict.items():
             if data.get("Seriennummer") == sn:
                 entrytitle = titel
         if entrytitle:
-            return database.find_entries(title=entrytitle, first=True)
-        else:
-            return None
+            entry = database.find_entries(title=entrytitle, first=True)
+        
+        if entry is None:
+            general = database.find_groups(name="General", first = True, recursive = True)
+            for g in iter_groups(general):
+                for e in g.entries:
+                    if (sn == e.get_custom_property("Seriennummer")):
+                        entry = e
+        
+        return entry
+
+            
 
     checkFor_geraetInput_change.last_value = mainWindow_obj.geraet_input.get() # Initialisierung der letzten Eingabe des Geräte-inputs
     checkFor_personInput_change.last_value = mainWindow_obj.person_input.get() # Initialisierung der letzten Eingabe des Person-inputs
