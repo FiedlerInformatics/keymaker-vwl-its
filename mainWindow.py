@@ -55,7 +55,7 @@ def openMainWindow(keyObject:Key):
                     name_title = ""
                     if(not e.title or not e.title.strip()):
                         name_title = e.get_custom_property("Name")
-                        entryLst.append(g.name + "/" + name_title)
+                        entryLst.append(g.name + "/" + ("" if name_title is None else name_title))
                     else:
                         name_title = e.title
                         entryLst.append(g.name + "/" + name_title)
