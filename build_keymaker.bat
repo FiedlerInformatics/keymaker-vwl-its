@@ -16,7 +16,7 @@ echo =====================================
 echo   Erzeuge Key-Maker.exe ...
 echo =====================================
 
-pyinstaller loginWindow.py --onefile --noconsole ^
+pyinstaller src/loginWindow.py --onefile --noconsole ^
 --name "keymaker" ^
 --icon=keymaker_images\keymaker_logo.ico ^
 --add-data "keymaker_images\*.png;keymaker_images" ^
