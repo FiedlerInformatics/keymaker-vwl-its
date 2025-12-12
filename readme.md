@@ -1,5 +1,5 @@
 # VWL Keymaker
-Automatisierungssoftware zur Archivierung von Bitlocker-keys in [KeePass](https://keepass.info/download.html) des technischen Supports der Volkswirtschaftlichen Fakultät der Ludwig-Maximilian-Universität München.
+Automatisierungssoftware zur Archivierung von Bitlocker-keys in [KeePass](https://keepass.info/download.html) des technischen Supports der Volkswirtschaftlichen Fakultät der LMU München.
 
 Eine Nutzungsanleitung finden Sie im [zugehörigen Wiki](https://github.com/FiedlerInformatics/keymaker-vwl-its/wiki).
 

@@ -26,48 +26,61 @@ from pathlib import Path
 from barcode.writer import SVGWriter
 from createPDF import PDF
 
+
+entryLst = []
+entryDict = {}
+
+def create_lehrstuhlLst(PyKeePass) -> list[str]:
+    """Returns a List of all subdirectories of the 'General' directory"""
+    regex = r'General/Bitlocker/.*'
+    strLst = []
+    for i in range(len(PyKeePass.groups)): 
+        strVar = str(PyKeePass.groups[i]).replace('Group: ', '').replace('"','')
+        if re.match(regex, strVar): 
+            strLst.append(strVar.replace('General/Bitlocker/', ''))
+    return strLst
+
+def iter_groups(group):
+        yield group
+        for child in group.subgroups:
+            yield from iter_groups(child)
+
+def init_enty_List_Dict(kp) -> None:
+    general = kp.find_groups(name="General", first = True, recursive = True)
+
+    for g in iter_groups(general):
+        for e in g.entries:
+            if e:
+                name_title = ""
+                if(not e.title or not e.title.strip()):
+                    name_title = e.get_custom_property("Name")
+                    entryLst.append(g.name + "/" + ("" if name_title is None else name_title))
+                else:
+                    name_title = e.title
+                    entryLst.append(g.name + "/" + name_title)
+
+                entryDict[name_title] = {
+                    "Seriennummer": e.get_custom_property("Seriennummer") or "",
+                    "Inventarisierungsnummer": e.get_custom_property("Inventarisierungsnummer") or ""
+                }
+
+def remove_CRLF(file_path) -> StringIO:
+    """CRUCIAL! Removes special charcters in the original bitlocker txt file."""
+    with open(file_path, "r") as file:
+        content = file.read()
+        clean_content = content.replace('\r', '')
+        clean_content = ''.join(filter(lambda x: x.isprintable() or x == '\n', clean_content))
+        file_curr = StringIO()
+        file_curr.write(clean_content)
+        file_curr.seek(0)
+    return file_curr
+
+
 def openMainWindow(keyObject:Key):
-    
-    entryLst = []
-    entryDict = {}
 
-    def create_lehrstuhlLst(PyKeePass) -> list[str]:
-        """Returns a List of all subdirectories of the 'General' directory"""
-        regex = r'General/Bitlocker/.*'
-        strLst = []
-        for i in range(len(PyKeePass.groups)): 
-            strVar = str(PyKeePass.groups[i]).replace('Group: ', '').replace('"','')
-            if re.match(regex, strVar): 
-                strLst.append(strVar.replace('General/Bitlocker/', ''))
-        return strLst
-
-    def iter_groups(group):
-            yield group
-            for child in group.subgroups:
-                yield from iter_groups(child)
-
-    def init_enty_List_Dict(kp) -> None:
-        general = kp.find_groups(name="General", first = True, recursive = True)
-    
-        for g in iter_groups(general):
-            for e in g.entries:
-                if e:
-                    name_title = ""
-                    if(not e.title or not e.title.strip()):
-                        name_title = e.get_custom_property("Name")
-                        entryLst.append(g.name + "/" + ("" if name_title is None else name_title))
-                    else:
-                        name_title = e.title
-                        entryLst.append(g.name + "/" + name_title)
-
-                    entryDict[name_title] = {
-                        "Seriennummer": e.get_custom_property("Seriennummer") or "",
-                        "Inventarisierungsnummer": e.get_custom_property("Inventarisierungsnummer") or ""
-                    }
 
     database = PyKeePass(keyObject.database_path, keyObject.password)
     init_enty_List_Dict(database)
-
 
     mainWindow_obj = MAIN(create_lehrstuhlLst(database), entryLst)
 
@@ -261,17 +274,7 @@ def openMainWindow(keyObject:Key):
         else: 
             return identifier, recovery_key
 
-    def remove_CRLF(file_path) -> StringIO:
-        """CRUCIAL! Removes special charcters in the original bitlocker txt file."""
-        with open(file_path, "r") as file:
-            content = file.read()
-            clean_content = content.replace('\r', '')
-            clean_content = ''.join(filter(lambda x: x.isprintable() or x == '\n', clean_content))
-            file_curr = StringIO()
-            file_curr.write(clean_content)
-            file_curr.seek(0)
-        return file_curr
-
+   
     def get_fieldInputs() -> None:
         """Reads strings from the input fields and stores them in the attributes of the Key object."""
         keyObject.txt_path = mainWindow_obj.txt_entry.get()
@@ -328,7 +331,6 @@ def openMainWindow(keyObject:Key):
         pdf.print_key(keyObject)
         pdf.output(download_dir)
         os.remove("key_barcode.svg")
-    #############################################################
 
     def write_entry(entry) -> None:
         """Helper of 'make_keyEntry'<br> Writes a new entry with the data from the key object to the database"""
